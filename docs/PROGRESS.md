@@ -1,5 +1,34 @@
 # Progress
 
+## 2026-08-18 (M8c) — user manual · M8 complete
+
+Final slice of M8 (Ship). **All milestones M0–M8 are now done.**
+
+### Done
+
+- **User manual** (`docs/MANUAL.md`) — end-user documentation: installing on
+  macOS/Windows, first launch + standalone audio/mic setup, the rack UI tour,
+  building a rack (drag & drop, reorder, duplicate, remove), control interactions
+  (knob drag/Shift-fine/double-click-reset/wheel, selectors, switches), per-slot
+  bypass & mix, A/B compare, MIDI learn, presets + crash recovery, a full
+  **module reference** with every parameter and range for all 8 modules, a
+  keyboard/mouse quick reference, and troubleshooting (incl. the standalone
+  input-device-mismatch gotcha). Parameter tables verified against the module
+  descriptors and `declareParameters`.
+- README status table now shows the whole plan complete and links the manual.
+
+### Verified
+
+- All parameter ranges/U-heights in the reference cross-checked against
+  `src/dsp/*/…Module.*` (descriptors + `declareParameters`) and
+  `ui/src/bridge/previewSchema.ts`.
+
+### Remaining (external, not milestones)
+
+Signed + notarised release builds; a universal macOS binary; the Windows
+installer compiled + smoke-tested on a real Windows host; a host-automation
+hands-on pass in a real DAW.
+
 ## 2026-08-18 (M8b) — installers + signing/notarisation docs
 
 Second slice of M8 (Ship). See ADR 0008.

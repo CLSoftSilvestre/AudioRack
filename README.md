@@ -23,9 +23,13 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M7b — MIDI learn (right-click any knob/switch) | ✅ |
 | M8a — Crash-safe standalone state + performance pass | ✅ |
 | M8b — Installers (macOS pkg, Windows InnoSetup) + signing docs | ✅ |
-| M8c — User manual | ⏳ |
+| M8c — User manual | ✅ |
 
-See [docs/PROGRESS.md](docs/PROGRESS.md).
+All milestones complete. Remaining open items are external: signed/notarised
+release builds, a universal macOS binary, the Windows installer built on a real
+Windows host, and a host-automation hands-on pass in a DAW.
+
+See [docs/PROGRESS.md](docs/PROGRESS.md). End-user docs: [docs/MANUAL.md](docs/MANUAL.md).
 
 ## Building
 
