@@ -1,6 +1,9 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#include "../core/ModuleRegistry.h"
+#include "../state/RackState.h"
+
 namespace audiorack
 {
 
@@ -12,14 +15,176 @@ juce::AudioProcessor::BusesProperties AudioRackProcessor::makeBusesProperties()
         .withInput  ("Sidechain", juce::AudioChannelSet::stereo(), false);
 }
 
-AudioRackProcessor::AudioRackProcessor()
-    : juce::AudioProcessor (makeBusesProperties())
+juce::AudioProcessorValueTreeState::ParameterLayout AudioRackProcessor::createParameterLayout()
 {
+    registerBuiltinModules();
+
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+    for (int slot = 0; slot < kMaxSlots; ++slot)
+    {
+        const auto slotLabel = "Slot " + juce::String (slot + 1);
+
+        layout.add (std::make_unique<juce::AudioParameterBool> (
+            juce::ParameterID { makeSlotParamID (slot, "bypass"), 1 },
+            slotLabel + " Bypass", false));
+
+        layout.add (std::make_unique<juce::AudioParameterFloat> (
+            juce::ParameterID { makeSlotParamID (slot, "mix"), 1 },
+            slotLabel + " Mix",
+            juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 1.0f));
+
+        for (const auto& type : ModuleRegistry::instance().types())
+        {
+            ParameterBuilder builder;
+            type.declareParameters (builder);
+
+            for (const auto& spec : builder.specs())
+                layout.add (std::make_unique<juce::AudioParameterFloat> (
+                    juce::ParameterID { makeParamID (slot, type.descriptor.id, spec.idSuffix), 1 },
+                    slotLabel + " " + type.descriptor.name + " " + spec.displayName,
+                    spec.range, spec.defaultValue,
+                    juce::AudioParameterFloatAttributes().withLabel (spec.unit)));
+        }
+    }
+
+    return layout;
 }
 
-void AudioRackProcessor::prepareToPlay (double, int)
+AudioRackProcessor::AudioRackProcessor()
+    : juce::AudioProcessor (makeBusesProperties()),
+      apvts (*this, nullptr, "PARAMS", createParameterLayout())
 {
-    // M1 will forward this to the RackEngine. Nothing to preallocate yet.
+    for (int slot = 0; slot < kMaxSlots; ++slot)
+    {
+        engine.slot (slot).bindBypass (apvts.getRawParameterValue (makeSlotParamID (slot, "bypass")));
+        engine.slot (slot).bindMix    (apvts.getRawParameterValue (makeSlotParamID (slot, "mix")));
+    }
+
+    // Fresh instances start with a Gain in the first slot so there is
+    // something to see, hear and automate.
+    mountModule (0, "gain");
+
+    startTimerHz (30);
+}
+
+AudioRackProcessor::~AudioRackProcessor()
+{
+    stopTimer();
+}
+
+// --- Rack management ----------------------------------------------------------
+
+bool AudioRackProcessor::mountModule (int slot, const juce::String& moduleId)
+{
+    jassert (juce::isPositiveAndBelow (slot, kMaxSlots));
+
+    const auto* info = ModuleRegistry::instance().find (moduleId.toStdString());
+
+    if (info == nullptr)
+        return false;
+
+    auto instance = info->create();
+
+    ParameterBuilder builder;
+    info->declareParameters (builder);
+
+    for (const auto& spec : builder.specs())
+        instance->bindParameter (spec.idSuffix,
+                                 apvts.getRawParameterValue (makeParamID (slot, info->descriptor.id, spec.idSuffix)));
+
+    if (! engine.setModule (slot, std::move (instance)))
+        return false;
+
+    slotModuleIds[static_cast<size_t> (slot)] = moduleId;
+    rackLayoutChanged.sendChangeMessage();
+    return true;
+}
+
+bool AudioRackProcessor::unmountSlot (int slot)
+{
+    jassert (juce::isPositiveAndBelow (slot, kMaxSlots));
+
+    if (slotModuleIds[static_cast<size_t> (slot)].isEmpty())
+        return true;
+
+    if (! engine.clearSlot (slot))
+        return false;
+
+    slotModuleIds[static_cast<size_t> (slot)].clear();
+    rackLayoutChanged.sendChangeMessage();
+    return true;
+}
+
+bool AudioRackProcessor::moveModule (int fromSlot, int toSlot)
+{
+    jassert (juce::isPositiveAndBelow (fromSlot, kMaxSlots));
+    jassert (juce::isPositiveAndBelow (toSlot, kMaxSlots));
+
+    if (fromSlot == toSlot)
+        return true;
+
+    const auto movingId  = slotModuleIds[static_cast<size_t> (fromSlot)];
+    const auto displaced = slotModuleIds[static_cast<size_t> (toSlot)];
+
+    if (movingId.isEmpty())
+        return false;
+
+    // Mounted modules never rebind parameters (that would race the audio
+    // thread), so a move is: copy values across slots, remount fresh.
+    copyModuleParams (fromSlot, toSlot, movingId);
+
+    if (displaced.isNotEmpty())
+        copyModuleParams (toSlot, fromSlot, displaced);
+
+    mountModule (toSlot, movingId);
+
+    if (displaced.isNotEmpty())
+        mountModule (fromSlot, displaced);
+    else
+        unmountSlot (fromSlot);
+
+    return true;
+}
+
+void AudioRackProcessor::copyModuleParams (int fromSlot, int toSlot, const juce::String& moduleId)
+{
+    const auto* info = ModuleRegistry::instance().find (moduleId.toStdString());
+
+    if (info == nullptr)
+        return;
+
+    ParameterBuilder builder;
+    info->declareParameters (builder);
+
+    auto copyOne = [this] (const juce::String& fromID, const juce::String& toID)
+    {
+        auto* from = apvts.getParameter (fromID);
+        auto* to   = apvts.getParameter (toID);
+
+        if (from != nullptr && to != nullptr)
+            to->setValueNotifyingHost (from->getValue());
+    };
+
+    for (const auto& spec : builder.specs())
+        copyOne (makeParamID (fromSlot, info->descriptor.id, spec.idSuffix),
+                 makeParamID (toSlot,   info->descriptor.id, spec.idSuffix));
+
+    copyOne (makeSlotParamID (fromSlot, "bypass"), makeSlotParamID (toSlot, "bypass"));
+    copyOne (makeSlotParamID (fromSlot, "mix"),    makeSlotParamID (toSlot, "mix"));
+}
+
+const juce::String& AudioRackProcessor::mountedModuleId (int slot) const noexcept
+{
+    return slotModuleIds[static_cast<size_t> (slot)];
+}
+
+// --- Audio ----------------------------------------------------------------------
+
+void AudioRackProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+{
+    engine.prepare (sampleRate, samplesPerBlock, getMainBusNumOutputChannels());
+    setLatencySamples (engine.latencySamples());
 }
 
 void AudioRackProcessor::releaseResources()
@@ -44,14 +209,55 @@ bool AudioRackProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
         || sidechain == juce::AudioChannelSet::stereo();
 }
 
+TransportInfo AudioRackProcessor::currentTransport() noexcept
+{
+    TransportInfo info;
+    info.sampleRate = getSampleRate();
+
+    if (auto* playHead = getPlayHead())
+    {
+        if (const auto position = playHead->getPosition())
+        {
+            if (const auto bpm = position->getBpm())
+                info.bpm = *bpm;
+
+            if (const auto ppq = position->getPpqPosition())
+                info.ppqPosition = *ppq;
+
+            if (const auto sig = position->getTimeSignature())
+            {
+                info.timeSigNumerator   = sig->numerator;
+                info.timeSigDenominator = sig->denominator;
+            }
+
+            info.isPlaying = position->getIsPlaying();
+        }
+    }
+
+    return info;
+}
+
 void AudioRackProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Passthrough: leave the main bus untouched, silence any output channels
-    // that have no corresponding input.
+    // Silence any output channels that have no corresponding input.
     for (int ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch)
         buffer.clear (ch, 0, buffer.getNumSamples());
+
+    auto mainBus = getBusBuffer (buffer, false, 0);
+    juce::dsp::AudioBlock<float> block (mainBus);
+
+    engine.process (block, currentTransport());
+}
+
+void AudioRackProcessor::timerCallback()
+{
+    engine.collectGarbage();
+
+    const auto latency = engine.latencySamples();
+    if (latency != getLatencySamples())
+        setLatencySamples (latency);
 }
 
 juce::AudioProcessorEditor* AudioRackProcessor::createEditor()
@@ -59,20 +265,18 @@ juce::AudioProcessorEditor* AudioRackProcessor::createEditor()
     return new AudioRackEditor (*this);
 }
 
+// --- State ------------------------------------------------------------------------
+
 void AudioRackProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // Schema-versioned from the start so M2's real state format can migrate.
-    juce::ValueTree state ("AudioRack");
-    state.setProperty ("schemaVersion", 1, nullptr);
-
-    juce::MemoryOutputStream stream (destData, false);
-    state.writeToStream (stream);
+    const auto json = rackStateToJson (*this);
+    destData.replaceAll (json.toRawUTF8(), json.getNumBytesAsUTF8());
 }
 
 void AudioRackProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    const auto state = juce::ValueTree::readFromData (data, static_cast<size_t> (sizeInBytes));
-    juce::ignoreUnused (state); // M2 restores rack + parameters from here.
+    const auto json = juce::String::fromUTF8 (static_cast<const char*> (data), sizeInBytes);
+    applyRackStateJson (*this, json);
 }
 
 } // namespace audiorack

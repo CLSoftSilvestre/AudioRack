@@ -27,10 +27,14 @@ juce_generate_juce_header(AudioRack)
 
 set(AUDIORACK_PLUGIN_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin/PluginProcessor.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/plugin/PluginEditor.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/plugin/PluginEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/state/RackState.cpp)
 
-target_sources(AudioRack PRIVATE ${AUDIORACK_PLUGIN_SOURCES})
-audiorack_strict_sources(${AUDIORACK_PLUGIN_SOURCES})
+target_sources(AudioRack PRIVATE
+    ${AUDIORACK_PLUGIN_SOURCES}
+    ${AUDIORACK_CORE_SOURCES}
+    ${AUDIORACK_DSP_SOURCES})
+audiorack_strict_sources(${AUDIORACK_PLUGIN_SOURCES} ${AUDIORACK_CORE_SOURCES} ${AUDIORACK_DSP_SOURCES})
 
 target_include_directories(AudioRack PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
