@@ -178,7 +178,7 @@ private:
     std::unique_ptr<std::atomic<float>[]> midiValue;      // newest value per param
     std::unique_ptr<std::atomic<bool>[]>  midiDirty;
 
-    std::atomic<int> editorWidth { 1300 }, editorHeight { 780 };
+    std::atomic<int> editorWidth { 1200 }, editorHeight { 760 };
 
     // --- Crash-safe state (standalone only) ----------------------------------
     // The plugin's state is owned by the host, so recovery is null there. In the

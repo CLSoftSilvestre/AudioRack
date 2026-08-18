@@ -143,8 +143,8 @@ bool applyRackStateJson (AudioRackProcessor& processor, const juce::String& json
     // 5. Editor size.
     const auto editor = root.getProperty ("editor", juce::var());
     if (editor.isObject())
-        processor.setEditorSize ({ editor.getProperty ("width",  1300),
-                                   editor.getProperty ("height", 780) });
+        processor.setEditorSize ({ editor.getProperty ("width",  1200),
+                                   editor.getProperty ("height", 760) });
 
     return true;
 }

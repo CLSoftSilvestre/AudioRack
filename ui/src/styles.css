@@ -67,9 +67,14 @@ body {
 
 .stage {
   width: 1060px;
-  margin: 0 auto;
   padding: 14px 0 60px;
-  transform-origin: top center;
+  /* Scaled by JS to stage-wrap width (see main.ts). A top-left origin makes the
+     scaled box map exactly onto [0, columnWidth], so the rack always fills the
+     column and its right edge is never pushed off-screen at narrow widths.
+     (A centered origin combined with margin:auto collapsing on overflow used to
+     shift the rack sideways and clip its right post below the 1060px design
+     width.) */
+  transform-origin: top left;
 }
 
 /* ============================== MODULE BROWSER ============================== */

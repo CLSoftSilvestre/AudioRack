@@ -5,8 +5,11 @@ namespace audiorack
 
 namespace
 {
-    constexpr int  kDefaultWidth  = 1300;   // browser panel + full-width rack
-    constexpr int  kDefaultHeight = 780;
+    // Browser panel (210) + a comfortably scaled rack. Kept clear of a 1280-wide
+    // laptop screen so the initial window is not clamped narrower than the rack
+    // (the UI now fills any width, but a fresh window should still open unclipped).
+    constexpr int  kDefaultWidth  = 1200;
+    constexpr int  kDefaultHeight = 760;
     constexpr double kAspect      = static_cast<double> (kDefaultWidth) / kDefaultHeight;
 }
 
