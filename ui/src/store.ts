@@ -25,6 +25,7 @@ export class Store {
 
   private slots: string[] = Array.from({ length: MAX_SLOTS }, () => "");
   private modules: ModuleInfo[] = [];
+  private version = "";
   private rackListeners = new Set<RackListener>();
 
   private meterListeners = new Map<number, Set<MeterListener>>();
@@ -48,6 +49,7 @@ export class Store {
     bridge.onRack((msg) => {
       this.slots = msg.slots;
       this.modules = msg.modules;
+      if (msg.version) this.version = msg.version;
       this.rackListeners.forEach((fn) => fn(this.slots, this.modules));
     });
 
@@ -91,6 +93,16 @@ export class Store {
 
   availableModules(): ModuleInfo[] {
     return this.modules;
+  }
+
+  appVersion(): string {
+    return this.version;
+  }
+
+  /** Open an external URL in the system browser (via native, or a new tab in
+   *  the browser preview). */
+  openUrl(url: string): void {
+    this.bridge.send({ type: "openUrl", url });
   }
 
   activeBank(): number {

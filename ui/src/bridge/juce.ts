@@ -167,6 +167,9 @@ class MockBridge implements Bridge {
         this.midiMap.delete(event.id);
         this.emitMidi();
         break;
+      case "openUrl":
+        window.open(event.url, "_blank", "noopener");
+        break;
       case "beginGesture":
       case "endGesture":
         break;
@@ -234,6 +237,7 @@ class MockBridge implements Bridge {
   private emitRack(): void {
     const msg: RackMessage = {
       slots: [...this.slots],
+      version: "0.1.0",
       modules: [
         { id: "gain", name: "Gain", category: "Utility", units: 1 },
         { id: "comp", name: "Compressor", category: "Dynamics", units: 2 },

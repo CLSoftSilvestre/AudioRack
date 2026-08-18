@@ -58,6 +58,13 @@ rescale();
 // Tell the backend we're alive; it answers with rack layout + all params.
 store.start();
 
+// QA hook ("?about"): open the About dialog for headless screenshots.
+if (window.location.search.includes("about")) {
+  window.setTimeout(() => {
+    document.querySelector<HTMLButtonElement>(".toolbar-brand")?.click();
+  }, 300);
+}
+
 // QA hook ("?miditest"): drive the real right-click -> "MIDI Learn" path on the
 // first mappable control so the armed ring and, once the mock binds a synthetic
 // CC, the "CCn" badge can be screenshotted headlessly. Dev-only, like ?bench.

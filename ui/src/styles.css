@@ -213,6 +213,108 @@ body {
   display: flex;
   align-items: baseline;
   gap: 12px;
+  /* reset the <button> back to a bare, clickable wordmark */
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+  border-radius: 4px;
+}
+
+.toolbar-brand:hover .toolbar-logo { color: #fff; }
+.toolbar-brand:focus-visible { box-shadow: 0 0 0 2px rgba(120, 170, 255, 0.7); }
+
+/* ================================ ABOUT DIALOG ============================== */
+
+.about-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 7, 9, 0.62);
+  backdrop-filter: blur(2px);
+}
+
+.about-card {
+  position: relative;
+  width: min(340px, 82vw);
+  padding: 30px 30px 26px;
+  text-align: center;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2b2d33 0%, #212328 55%, #191a1d 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+.about-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: #7c828b;
+  cursor: pointer;
+}
+.about-close:hover { color: #e8e6de; }
+
+.about-logo {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #e8e6de;
+}
+.about-logo span { font-weight: 300; color: #b7bbc2; }
+
+.about-tag {
+  margin-top: 4px;
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #62666d;
+}
+
+.about-version {
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #9aa0a8;
+}
+
+.about-credit {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #c7cbd2;
+}
+
+.about-link {
+  color: #7fbcff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.about-link:hover { text-decoration: underline; }
+
+.about-author {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #8a9098;
+}
+
+.about-licence {
+  margin-top: 18px;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  color: #595e65;
 }
 
 .toolbar-logo {

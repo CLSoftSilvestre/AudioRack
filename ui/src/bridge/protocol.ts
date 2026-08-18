@@ -16,6 +16,7 @@ export interface ModuleInfo {
 export interface RackMessage {
   slots: string[]; // module id per slot, "" = empty
   modules: ModuleInfo[];
+  version?: string; // plugin version (JucePlugin_VersionString)
 }
 
 /** native -> web: "ar_params" — batch of [paramID, value01, displayText] */
@@ -55,7 +56,8 @@ export type UiEvent =
   | { type: "abCopy" }
   | { type: "midiLearn"; id: string }
   | { type: "midiClearLearn" }
-  | { type: "midiForget"; id: string };
+  | { type: "midiForget"; id: string }
+  | { type: "openUrl"; url: string };
 
 /** Parameter ID helpers — must match src/core/ParameterModel.h. */
 export const paramID = (slot: number, moduleId: string, suffix: string): string =>

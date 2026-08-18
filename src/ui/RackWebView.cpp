@@ -116,6 +116,7 @@ void RackWebView::sendRackLayout()
         modules.add (juce::var (m));
     }
     payload->setProperty ("modules", modules);
+    payload->setProperty ("version", JucePlugin_VersionString);
 
     web->emitEventIfBrowserIsVisible ("ar_rack", juce::var (payload));
 }
@@ -336,6 +337,14 @@ void RackWebView::handleUiEvent (const juce::var& payload)
     if (type == "midiForget")
     {
         processor.forgetMidiMapping (payload.getProperty ("id", juce::var()).toString());
+        return;
+    }
+
+    if (type == "openUrl")
+    {
+        const auto url = payload.getProperty ("url", juce::var()).toString();
+        if (url.startsWith ("https://") || url.startsWith ("http://"))
+            juce::URL (url).launchInDefaultBrowser();
         return;
     }
 }

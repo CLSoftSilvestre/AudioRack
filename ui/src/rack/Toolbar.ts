@@ -7,6 +7,7 @@
  */
 
 import type { Store } from "../store";
+import { openAbout } from "./About";
 
 export class Toolbar {
   readonly el: HTMLElement;
@@ -17,16 +18,20 @@ export class Toolbar {
     this.el = document.createElement("div");
     this.el.className = "rack-toolbar";
     this.el.innerHTML = `
-      <div class="toolbar-brand">
+      <button class="toolbar-brand" title="About AudioRack">
         <span class="toolbar-logo">AUDIO<span>RACK</span></span>
         <span class="toolbar-tag">EFFECTS RACK</span>
-      </div>
+      </button>
       <div class="toolbar-ab">
         <span class="ab-label">COMPARE</span>
         <button class="ab-btn" data-bank="0">A</button>
         <button class="ab-btn" data-bank="1">B</button>
         <button class="ab-copy" title="Copy the live bank onto the other">COPY →</button>
       </div>`;
+
+    this.el
+      .querySelector<HTMLButtonElement>(".toolbar-brand")!
+      .addEventListener("click", () => openAbout(this.store));
 
     this.buttonA = this.el.querySelector<HTMLButtonElement>('.ab-btn[data-bank="0"]')!;
     this.buttonB = this.el.querySelector<HTMLButtonElement>('.ab-btn[data-bank="1"]')!;
