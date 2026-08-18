@@ -871,8 +871,13 @@ body.dragging * {
 
 .eq-rail {
   position: absolute;
-  right: 58px;
-  top: 8px;
+  /* centred in the free space between the band-6 strip and the right rack edge,
+     and vertically aligned with the GAIN (middle) knob row of the strips */
+  right: 18px;
+  /* +12px nudges the knob body (the rail also holds the label below it) down
+     onto the GAIN knob row */
+  top: calc(50% + 12px);
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
