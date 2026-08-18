@@ -1,5 +1,47 @@
 # Progress
 
+## 2026-08-18 (M8a) — crash-safe standalone state + performance pass
+
+First slice of M8 (Ship). See ADR 0007.
+
+### Done
+
+- **Crash-safe standalone state** (`src/state/SessionRecovery.*`) — the
+  standalone owns its own state (the plugin's is host-owned), and JUCE only
+  persists it on a *clean* shutdown, so a crash lost the session. Now the
+  processor autosaves the full state atomically (temp + rename, so a crash never
+  leaves a half-written file) to `<appData>/AudioRack/session.autosave.json`
+  every ~4 s on its existing 30 Hz timer, guarded by a `session.lock` sentinel.
+  Finding the lock at the next launch means the previous run crashed → the
+  recovered snapshot is applied on the first timer tick (after the standalone
+  holder's own restore, so the fresher state wins). Standalone-only:
+  `wrapperType == wrapperType_Standalone`; `recovery` is null in the plugin.
+- **Performance pass** (`tests/RackBench.cpp`, target `audiorack_bench`) — times
+  `RackEngine::process` on a full 12-slot rack (every module type cycled) over
+  30 000 blocks against the realtime budget.
+
+### Measured / verified
+
+- **43 DSP/unit tests green** (was 37; +6 `SessionRecoveryTests`: fresh dir,
+  write/dedupe, unclean-shutdown recovery, clean-shutdown no-recovery, atomic
+  write leaves no temp, clearSnapshot).
+- **`pluginval --strictness-level 10` passes** on the VST3 (recovery's null
+  path), incl. state fuzz — zero warnings.
+- **Crash-safe loop verified against the built app**: running app creates the
+  lock + a 108 KB autosave; clean quit removes the lock; a planted stale lock +
+  distinctive snapshot is adopted on relaunch over the holder's own state.
+- **Benchmark (Release, 2019 Intel Mac):** full rack incl. 4×-oversampled
+  saturator/limiter, FDN reverb, 6-band EQ, Lagrange delay —
+  - 512 @ 48 kHz (budget 10.67 ms): p50 **5.5 %** / p95 7.9 % / p99 8.9 % / max 35.7 %.
+  - 64 @ 96 kHz (budget 0.67 ms): p50 **10.8 %** / p95 16.3 % / p99 23.4 % / max 82.3 %.
+  - Never crosses 100 % (no dropout); `max` outliers are OS scheduling jitter.
+
+### Next (M8b / M8c)
+
+Installers (macOS `.pkg` via pkgbuild/productbuild, Windows InnoSetup), code
+signing + notarisation docs, WebView2 bootstrapper bundling (M8b); user manual
+(M8c). Still open: host-automation hands-on pass in a real DAW.
+
 ## 2026-08-18 (later still ×3) — M7b MIDI learn
 
 Completes M7 (Rack UX). See ADR 0006.

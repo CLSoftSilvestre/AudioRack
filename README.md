@@ -21,7 +21,8 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M6 — Time & tone (EQ, delay, reverb, saturator) | ✅ |
 | M7a — Rack UX: browser, drag & drop, reorder, duplicate, A/B | ✅ |
 | M7b — MIDI learn (right-click any knob/switch) | ✅ |
-| M8 — Shipping (installers, signing, manual) | ⏳ |
+| M8a — Crash-safe standalone state + performance pass | ✅ |
+| M8b/c — Installers, signing/notarisation docs, user manual | ⏳ |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md).
 

@@ -12,6 +12,8 @@
 namespace audiorack
 {
 
+class SessionRecovery;
+
 /** AudioRack plugin processor.
 
     Hosts the RackEngine (serial module chain) and owns the APVTS. Parameters
@@ -177,6 +179,15 @@ private:
     std::unique_ptr<std::atomic<bool>[]>  midiDirty;
 
     std::atomic<int> editorWidth { 1300 }, editorHeight { 780 };
+
+    // --- Crash-safe state (standalone only) ----------------------------------
+    // The plugin's state is owned by the host, so recovery is null there. In the
+    // standalone, the timer autosaves the full state atomically and, on a launch
+    // that follows a crash, the recovered snapshot is applied once startup has
+    // settled (see timerCallback / the constructor).
+    std::unique_ptr<SessionRecovery> recovery;
+    juce::String pendingRecovery;          // snapshot to apply on the first timer tick
+    int          autosaveCountdown = 1;    // timer ticks until the next autosave
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioRackProcessor)
 };

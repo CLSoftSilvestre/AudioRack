@@ -87,6 +87,7 @@ set(AUDIORACK_PLUGIN_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin/PluginProcessor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/plugin/PluginEditor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/state/RackState.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/state/SessionRecovery.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ui/RackWebView.cpp)
 
 target_sources(AudioRack PRIVATE

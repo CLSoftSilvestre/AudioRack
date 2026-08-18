@@ -3,9 +3,18 @@
 
 #include "../core/ModuleRegistry.h"
 #include "../state/RackState.h"
+#include "../state/SessionRecovery.h"
 
 namespace audiorack
 {
+
+namespace
+{
+    // Autosave cadence for the standalone: the processor timer runs at 30 Hz, so
+    // 120 ticks ≈ every 4 s. writeSnapshot() dedupes, so an idle session that
+    // never changes state does not actually touch the disk.
+    constexpr int kAutosaveTicks = 120;
+}
 
 juce::AudioProcessor::BusesProperties AudioRackProcessor::makeBusesProperties()
 {
@@ -97,12 +106,33 @@ AudioRackProcessor::AudioRackProcessor()
         midiDirty[i].store (false, std::memory_order_relaxed);
     }
 
+    // Standalone only: arm crash-safe autosave. beginSession() reports whether
+    // the previous run left its lock behind (i.e. crashed); if so, the recovered
+    // snapshot is applied on the first timer tick — after the StandalonePlugin
+    // holder has restored its own (older, clean-exit) state, so ours wins.
+    if (wrapperType == wrapperType_Standalone)
+    {
+        recovery = std::make_unique<SessionRecovery>();
+        auto start = recovery->beginSession();
+        if (start.recovered)
+            pendingRecovery = std::move (start.snapshot);
+    }
+
     startTimerHz (30);
 }
 
 AudioRackProcessor::~AudioRackProcessor()
 {
     stopTimer();
+
+    if (recovery != nullptr)
+    {
+        // Clean shutdown: flush the latest state, then drop the lock so the next
+        // launch does not mistake this exit for a crash.
+        captureBank (currentBank);
+        recovery->writeSnapshot (rackStateToJson (*this));
+        recovery->endSessionCleanly();
+    }
 }
 
 // --- Rack management ----------------------------------------------------------
@@ -501,12 +531,28 @@ void AudioRackProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
 void AudioRackProcessor::timerCallback()
 {
+    // Apply a recovered session once, after startup has settled (this is the
+    // first timer tick, so the holder's own state restore has already run).
+    if (pendingRecovery.isNotEmpty())
+    {
+        applyRackStateJson (*this, pendingRecovery);   // fires the UI broadcasters
+        pendingRecovery.clear();
+    }
+
     engine.collectGarbage();
     drainMidi();
 
     const auto latency = engine.latencySamples();
     if (latency != getLatencySamples())
         setLatencySamples (latency);
+
+    // Periodic crash-safe autosave (standalone only; deduped by SessionRecovery).
+    if (recovery != nullptr && --autosaveCountdown <= 0)
+    {
+        autosaveCountdown = kAutosaveTicks;
+        captureBank (currentBank);
+        recovery->writeSnapshot (rackStateToJson (*this));
+    }
 }
 
 juce::AudioProcessorEditor* AudioRackProcessor::createEditor()
