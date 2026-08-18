@@ -7,6 +7,8 @@ import type { Bridge } from "./bridge/juce";
 import type { MeterFrameData } from "./types";
 import { MAX_SLOTS, type ModuleInfo, type UiEvent } from "./bridge/protocol";
 
+type AbListener = (bank: number) => void;
+
 export interface ParamState {
   value01: number;
   text: string;
@@ -25,6 +27,9 @@ export class Store {
   private rackListeners = new Set<RackListener>();
 
   private meterListeners = new Map<number, Set<MeterListener>>();
+
+  private bank = 0;
+  private abListeners = new Set<AbListener>();
 
   constructor(private bridge: Bridge) {
     bridge.onParams((msg) => {
@@ -47,6 +52,11 @@ export class Store {
           .get(slot)
           ?.forEach((fn) => fn({ peakL, peakR, rmsL, rmsR, grDb }));
       }
+    });
+
+    bridge.onAb((msg) => {
+      this.bank = msg.bank;
+      this.abListeners.forEach((fn) => fn(this.bank));
     });
   }
 
@@ -72,6 +82,15 @@ export class Store {
     return this.modules;
   }
 
+  activeBank(): number {
+    return this.bank;
+  }
+
+  /** Index of the first empty slot, or -1 if the rack is full. */
+  firstEmptySlot(): number {
+    return this.slots.indexOf("");
+  }
+
   // --- subscriptions -------------------------------------------------------------
 
   onParam(id: string, fn: ParamListener): () => void {
@@ -95,6 +114,12 @@ export class Store {
     return () => set.delete(fn);
   }
 
+  onAb(fn: AbListener): () => void {
+    this.abListeners.add(fn);
+    fn(this.bank);
+    return () => this.abListeners.delete(fn);
+  }
+
   // --- writes (forwarded to native; echo comes back through onParams) ---------------
 
   setParam(id: string, value01: number): void {
@@ -114,6 +139,15 @@ export class Store {
   }
   move(from: number, to: number): void {
     this.send({ type: "move", from, to });
+  }
+  duplicate(from: number, to: number): void {
+    this.send({ type: "duplicate", from, to });
+  }
+  selectBank(bank: number): void {
+    this.send({ type: "abSelect", bank });
+  }
+  copyBank(): void {
+    this.send({ type: "abCopy" });
   }
 
   private send(event: UiEvent): void {

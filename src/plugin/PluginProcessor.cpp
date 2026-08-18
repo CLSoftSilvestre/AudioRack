@@ -72,6 +72,10 @@ AudioRackProcessor::AudioRackProcessor()
     // something to see, hear and automate.
     mountModule (0, "gain");
 
+    // Seed both A/B banks with the initial (default) parameter values.
+    captureBank (0);
+    captureBank (1);
+
     startTimerHz (30);
 }
 
@@ -154,6 +158,20 @@ bool AudioRackProcessor::moveModule (int fromSlot, int toSlot)
     return true;
 }
 
+bool AudioRackProcessor::duplicateModule (int fromSlot, int toSlot)
+{
+    jassert (juce::isPositiveAndBelow (fromSlot, kMaxSlots));
+    jassert (juce::isPositiveAndBelow (toSlot, kMaxSlots));
+
+    const auto sourceId = slotModuleIds[static_cast<size_t> (fromSlot)];
+
+    if (sourceId.isEmpty() || slotModuleIds[static_cast<size_t> (toSlot)].isNotEmpty())
+        return false;
+
+    copyModuleParams (fromSlot, toSlot, sourceId);
+    return mountModule (toSlot, sourceId);
+}
+
 void AudioRackProcessor::copyModuleParams (int fromSlot, int toSlot, const juce::String& moduleId)
 {
     const auto* info = ModuleRegistry::instance().find (moduleId.toStdString());
@@ -184,6 +202,53 @@ void AudioRackProcessor::copyModuleParams (int fromSlot, int toSlot, const juce:
 const juce::String& AudioRackProcessor::mountedModuleId (int slot) const noexcept
 {
     return slotModuleIds[static_cast<size_t> (slot)];
+}
+
+// --- A/B compare --------------------------------------------------------------
+
+void AudioRackProcessor::captureBank (int bank)
+{
+    auto& snapshot = banks[static_cast<size_t> (bank)];
+    snapshot.clear();
+
+    for (auto* parameter : getParameters())
+        if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*> (parameter))
+            snapshot[ranged->paramID] = ranged->getValue();   // normalised 0..1
+}
+
+void AudioRackProcessor::applyBank (int bank)
+{
+    const auto& snapshot = banks[static_cast<size_t> (bank)];
+
+    for (auto* parameter : getParameters())
+        if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*> (parameter))
+            if (const auto it = snapshot.find (ranged->paramID); it != snapshot.end())
+                ranged->setValueNotifyingHost (it->second);
+}
+
+void AudioRackProcessor::loadBankSnapshot (int bank, std::map<juce::String, float> snapshot)
+{
+    banks[static_cast<size_t> (bank)] = std::move (snapshot);
+}
+
+void AudioRackProcessor::selectBank (int bank)
+{
+    bank = juce::jlimit (0, 1, bank);
+
+    if (bank == currentBank)
+        return;
+
+    captureBank (currentBank);   // remember the live values we are leaving
+    currentBank = bank;
+    applyBank (currentBank);     // recall the other bank's stored values
+    abStateChanged.sendChangeMessage();
+}
+
+void AudioRackProcessor::copyBankToOther()
+{
+    captureBank (currentBank);
+    banks[static_cast<size_t> (1 - currentBank)] = banks[static_cast<size_t> (currentBank)];
+    abStateChanged.sendChangeMessage();
 }
 
 // --- Audio ----------------------------------------------------------------------
@@ -292,6 +357,7 @@ juce::AudioProcessorEditor* AudioRackProcessor::createEditor()
 
 void AudioRackProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
+    captureBank (currentBank);   // fold live values into the active bank first
     const auto json = rackStateToJson (*this);
     destData.replaceAll (json.toRawUTF8(), json.getNumBytesAsUTF8());
 }

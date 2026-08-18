@@ -2,9 +2,10 @@
  *  mounted units. Rebuilds units only when the layout actually changes;
  *  meter/param updates never touch this layer.
  *
- *  Interactions here are the pre-M7 minimum: double-click an empty slot for
- *  a module picker, right-click a unit for bypass/remove. Drag-reorder, A/B
- *  and the browser panel arrive with M7.
+ *  Interactions: double-click an empty slot for a module picker; right-click a
+ *  unit for bypass / duplicate / remove; grab a unit by its rack ears to
+ *  drag-reorder (swap) or drag it onto the browser panel to remove; drop a
+ *  module chip from the browser onto an empty slot to mount it.
  */
 
 import { GainUnit } from "../units/GainUnit";
@@ -17,6 +18,7 @@ import { DelayUnit } from "../units/DelayUnit";
 import { ReverbUnit } from "../units/ReverbUnit";
 import { MAX_SLOTS, slotParamID } from "../bridge/protocol";
 import type { Store } from "../store";
+import type { DragManager } from "./dnd";
 
 interface UnitInstance {
   el: HTMLElement;
@@ -46,7 +48,10 @@ export class RackFrame {
   private mounted = new Map<number, Mounted>();
   private menu: HTMLElement | null = null;
 
-  constructor(private store: Store) {
+  constructor(
+    private store: Store,
+    private drag: DragManager,
+  ) {
     this.el = document.createElement("div");
     this.el.className = "rack";
     this.el.innerHTML = `
@@ -79,6 +84,8 @@ export class RackFrame {
       this.slotEls.push(slotEl);
     }
 
+    this.drag.setSlots(this.slotEls);
+
     document.addEventListener("pointerdown", (e) => {
       if (this.menu && !this.menu.contains(e.target as Node)) this.closeMenu();
     });
@@ -105,13 +112,22 @@ export class RackFrame {
         const UnitClass = UNIT_FACTORY[wanted];
         if (!UnitClass) continue;
 
-        const units = this.store.moduleInfo(wanted)?.units ?? 1;
+        const info = this.store.moduleInfo(wanted);
+        const units = info?.units ?? 1;
         const unit = new UnitClass(this.store, slot);
 
         this.slotEls[slot].style.height = `calc(var(--u) * ${units})`;
         this.slotEls[slot].appendChild(unit.el);
         this.slotEls[slot].classList.remove("empty");
         this.mounted.set(slot, { unit, moduleId: wanted });
+
+        // The rack ears are the drag handle — grab a unit there to move it.
+        const label = info?.name ?? wanted;
+        for (const ear of unit.el.querySelectorAll<HTMLElement>(".unit-ear")) {
+          ear.classList.add("drag-handle");
+          ear.title = "drag to move · drop on the browser to remove";
+          this.drag.attachSource(ear, () => ({ kind: "move", from: slot, label }));
+        }
       }
     }
   }
@@ -156,10 +172,16 @@ export class RackFrame {
     const bypassId = slotParamID(slot, "bypass");
     const bypassed = this.store.param(bypassId).value01 >= 0.5;
 
-    this.buildMenu(e.clientX, e.clientY, [
+    const items: [string, () => void][] = [
       [bypassed ? "Enable" : "Bypass", () => this.store.setParam(bypassId, bypassed ? 0 : 1)],
-      ["Remove", () => this.store.unmount(slot)],
-    ]);
+    ];
+
+    const target = this.store.firstEmptySlot();
+    if (target >= 0) items.push(["Duplicate", () => this.store.duplicate(slot, target)]);
+
+    items.push(["Remove", () => this.store.unmount(slot)]);
+
+    this.buildMenu(e.clientX, e.clientY, items);
   }
 
   private closeMenu(): void {

@@ -2,6 +2,9 @@
 
 #include <JuceHeader.h>
 
+#include <array>
+#include <map>
+
 #include "../core/RackEngine.h"
 
 namespace audiorack
@@ -63,10 +66,40 @@ public:
     /// with the module; DSP runtime state (tails etc.) deliberately resets.
     bool moveModule (int fromSlot, int toSlot);
 
+    /// Mounts a copy of fromSlot's module into (empty) toSlot, values and all.
+    bool duplicateModule (int fromSlot, int toSlot);
+
     const juce::String& mountedModuleId (int slot) const noexcept;
 
     /// Broadcasts on every rack layout change (mount/unmount/move/preset load).
     juce::ChangeBroadcaster rackLayoutChanged;
+
+    // --- A/B compare (message thread) ----------------------------------------
+    //
+    // Two parameter snapshots the user flips between. The rack layout is shared
+    // (params only); only the *inactive* bank is stored explicitly — the active
+    // bank is always the live APVTS state, captured lazily when it is left.
+
+    int  activeBank() const noexcept { return currentBank; }
+
+    /// Recall the other bank: stashes the live values into the current bank,
+    /// then loads the requested bank into the live parameters.
+    void selectBank (int bank);
+
+    /// Copy the current (live) bank onto the other, so A and B start equal.
+    void copyBankToOther();
+
+    /// Broadcasts whenever the active bank or a bank's contents change.
+    juce::ChangeBroadcaster abStateChanged;
+
+    // State (de)serialisation reaches into the banks directly.
+    void captureBank (int bank);
+    const std::map<juce::String, float>& bankSnapshot (int bank) const noexcept
+    {
+        return banks[static_cast<size_t> (bank)];
+    }
+    void loadBankSnapshot (int bank, std::map<juce::String, float> snapshot);
+    void setActiveBank (int bank) noexcept { currentBank = juce::jlimit (0, 1, bank); }
 
     // --- Accessors ------------------------------------------------------------
 
@@ -85,6 +118,7 @@ private:
     void timerCallback() override;
     TransportInfo currentTransport() noexcept;
     void copyModuleParams (int fromSlot, int toSlot, const juce::String& moduleId);
+    void applyBank (int bank);
 
     static BusesProperties makeBusesProperties();
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
@@ -94,7 +128,10 @@ private:
 
     std::array<juce::String, kMaxSlots> slotModuleIds;
 
-    std::atomic<int> editorWidth { 1100 }, editorHeight { 740 };
+    std::array<std::map<juce::String, float>, 2> banks;   // value01 snapshots
+    int currentBank = 0;
+
+    std::atomic<int> editorWidth { 1300 }, editorHeight { 780 };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioRackProcessor)
 };

@@ -5,8 +5,8 @@ namespace audiorack
 
 namespace
 {
-    constexpr int  kDefaultWidth  = 1100;
-    constexpr int  kDefaultHeight = 740;
+    constexpr int  kDefaultWidth  = 1300;   // browser panel + full-width rack
+    constexpr int  kDefaultHeight = 780;
     constexpr double kAspect      = static_cast<double> (kDefaultWidth) / kDefaultHeight;
 }
 
@@ -18,7 +18,7 @@ AudioRackEditor::AudioRackEditor (AudioRackProcessor& p)
     addAndMakeVisible (webView);
 
     setResizable (true, true);
-    setResizeLimits (770, static_cast<int> (770 / kAspect), 2200, static_cast<int> (2200 / kAspect));
+    setResizeLimits (1000, static_cast<int> (1000 / kAspect), 2400, static_cast<int> (2400 / kAspect));
 
     if (auto* constrainer = getConstrainer())
         constrainer->setFixedAspectRatio (kAspect);

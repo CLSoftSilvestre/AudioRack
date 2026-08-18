@@ -19,7 +19,8 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M4 — Widget library | ✅ |
 | M5 — Core dynamics (compressor, limiter, gate) | ✅ |
 | M6 — Time & tone (EQ, delay, reverb, saturator) | ✅ |
-| M7+ — Rack UX (drag/reorder/A-B/MIDI learn), shipping | ⏳ |
+| M7a — Rack UX: browser, drag & drop, reorder, duplicate, A/B | ✅ |
+| M7b — MIDI learn · M8 — shipping | ⏳ |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md).
 

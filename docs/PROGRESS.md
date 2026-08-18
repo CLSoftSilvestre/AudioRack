@@ -1,5 +1,48 @@
 # Progress
 
+## 2026-08-18 (later still ×2) — M7a rack UX (drag & drop + A/B)
+
+M7 is split into two commits; this is **M7a**. M7b (MIDI learn) is next.
+
+### Done
+
+- **Module browser** (`ui/src/rack/BrowserPanel.ts`) — left-hand palette of all
+  registered modules, grouped by category with U-heights. Each chip is a drag
+  source; double-click adds to the first free slot. The panel doubles as the
+  "drop here to remove" zone.
+- **Drag & drop** (`ui/src/rack/dnd.ts`) — pointer-based (not HTML5 DnD, which
+  is unreliable in WKWebView/WebView2), with a follow-the-cursor ghost and
+  green/red drop highlighting. Grab a mounted unit by its **rack ears** to
+  reorder (swap) or drag it onto the browser to remove; drop a chip onto an
+  empty slot to mount. Hit-testing via `elementsFromPoint` is scale-safe.
+- **Duplicate** — right-click a unit → Duplicate copies it (values and all) into
+  the first empty slot (`AudioRackProcessor::duplicateModule`).
+- **A/B compare** — top toolbar with A / B / COPY. Two parameter snapshots
+  (rack layout shared); selecting a bank recalls its values, COPY equalises them.
+  Only the inactive bank is stored; the active one is the live APVTS state,
+  synced on save. Persisted in state JSON under an optional `"ab"` node
+  (schema stays v1; older presets seed both banks from their loaded values).
+- **Layout** — studio is now `[ browser | scrolling stage ]`; the stage
+  (toolbar + rack) scales to its column. Default editor grew to 1300×780.
+
+### Measured / verified
+
+- 37 DSP tests green (unchanged — M7a adds no DSP).
+- `pluginval --strictness-level 10` passes incl. GUI: **Editor**, **Open editor
+  whilst processing**, **Editor Automation**, and **Fuzz parameters/state**
+  (the last round-trips the new A/B `"ab"` state) — zero warnings.
+- Clean `tsc --noEmit` + Vite build (bundle app.js 50 kB / app.css 26 kB).
+- Frame budget (`?full&bench`, 12-unit rack, headless Chrome): **p50 0.20 ms /
+  p95 0.30 ms / p99 0.40 ms / max 0.50 ms** — unchanged, well under 4 ms.
+- Browser-preview screenshots confirm the panel, toolbar (A lit), and scaled
+  rack render correctly.
+
+### Not done here (M7b — next)
+
+MIDI learn: enable a MIDI input bus on the (currently MIDI-free) effect, a
+realtime-safe CC→parameter map, learn-arm from the UI, and persisted mappings.
+Also still open from earlier: host automation hands-on pass in a real DAW.
+
 ## 2026-08-18 (later still) — M6 time & tone
 
 ### Done

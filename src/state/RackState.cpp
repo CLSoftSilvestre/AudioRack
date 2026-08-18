@@ -1,5 +1,7 @@
 #include "RackState.h"
 
+#include <map>
+
 #include "../plugin/PluginProcessor.h"
 
 namespace audiorack
@@ -21,6 +23,22 @@ juce::String rackStateToJson (const AudioRackProcessor& processor)
             params->setProperty (ranged->paramID,
                                  ranged->convertFrom0to1 (ranged->getValue()));
     root->setProperty ("params", juce::var (params));
+
+    // A/B banks (normalised 0..1 snapshots; the active bank was synced to live
+    // by the caller). Additive and optional — older readers ignore it.
+    auto bankToVar = [] (const std::map<juce::String, float>& snapshot)
+    {
+        auto* object = new juce::DynamicObject();
+        for (const auto& [id, value] : snapshot)
+            object->setProperty (id, static_cast<double> (value));
+        return juce::var (object);
+    };
+
+    auto* ab = new juce::DynamicObject();
+    ab->setProperty ("active", processor.activeBank());
+    ab->setProperty ("a", bankToVar (processor.bankSnapshot (0)));
+    ab->setProperty ("b", bankToVar (processor.bankSnapshot (1)));
+    root->setProperty ("ab", juce::var (ab));
 
     auto* editor = new juce::DynamicObject();
     editor->setProperty ("width",  processor.editorSize().x);
@@ -76,11 +94,37 @@ bool applyRackStateJson (AudioRackProcessor& processor, const juce::String& json
         }
     }
 
-    // 3. Editor size.
+    // 3. A/B banks. Absent in older presets: seed both from the loaded values.
+    if (const auto ab = root.getProperty ("ab", juce::var()); ab.isObject())
+    {
+        auto readBank = [] (const juce::var& node)
+        {
+            std::map<juce::String, float> snapshot;
+            if (auto* object = node.getDynamicObject())
+                for (const auto& entry : object->getProperties())
+                    snapshot[entry.name.toString()] =
+                        static_cast<float> (static_cast<double> (entry.value));
+            return snapshot;
+        };
+
+        processor.loadBankSnapshot (0, readBank (ab.getProperty ("a", juce::var())));
+        processor.loadBankSnapshot (1, readBank (ab.getProperty ("b", juce::var())));
+        processor.setActiveBank (static_cast<int> (ab.getProperty ("active", 0)));
+    }
+    else
+    {
+        processor.captureBank (0);
+        processor.captureBank (1);
+        processor.setActiveBank (0);
+    }
+
+    processor.abStateChanged.sendChangeMessage();
+
+    // 4. Editor size.
     const auto editor = root.getProperty ("editor", juce::var());
     if (editor.isObject())
-        processor.setEditorSize ({ editor.getProperty ("width",  1100),
-                                   editor.getProperty ("height", 740) });
+        processor.setEditorSize ({ editor.getProperty ("width",  1300),
+                                   editor.getProperty ("height", 780) });
 
     return true;
 }

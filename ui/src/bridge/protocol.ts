@@ -28,6 +28,11 @@ export interface MetersMessage {
   m: [number, number, number, number, number, number][];
 }
 
+/** native -> web: "ar_ab" — which parameter bank (A=0 / B=1) is live. */
+export interface AbMessage {
+  bank: number;
+}
+
 /** web -> native: everything travels on the "ar_ui" event. */
 export type UiEvent =
   | { type: "ready" }
@@ -36,7 +41,10 @@ export type UiEvent =
   | { type: "endGesture"; id: string }
   | { type: "mount"; slot: number; moduleId: string }
   | { type: "unmount"; slot: number }
-  | { type: "move"; from: number; to: number };
+  | { type: "move"; from: number; to: number }
+  | { type: "duplicate"; from: number; to: number }
+  | { type: "abSelect"; bank: number }
+  | { type: "abCopy" };
 
 /** Parameter ID helpers — must match src/core/ParameterModel.h. */
 export const paramID = (slot: number, moduleId: string, suffix: string): string =>

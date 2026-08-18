@@ -3,7 +3,7 @@
  *  browser so `npm run dev` works without the plugin.
  */
 
-import type { MetersMessage, ParamsMessage, RackMessage, UiEvent } from "./protocol";
+import type { AbMessage, MetersMessage, ParamsMessage, RackMessage, UiEvent } from "./protocol";
 import { MAX_SLOTS } from "./protocol";
 import { PREVIEW_SCHEMA } from "./previewSchema";
 
@@ -24,6 +24,7 @@ export interface Bridge {
   onRack(fn: (msg: RackMessage) => void): void;
   onParams(fn: (msg: ParamsMessage) => void): void;
   onMeters(fn: (msg: MetersMessage) => void): void;
+  onAb(fn: (msg: AbMessage) => void): void;
 }
 
 class NativeBridge implements Bridge {
@@ -43,6 +44,9 @@ class NativeBridge implements Bridge {
   onMeters(fn: (msg: MetersMessage) => void): void {
     this.backend.addEventListener("ar_meters", (p) => fn(p as MetersMessage));
   }
+  onAb(fn: (msg: AbMessage) => void): void {
+    this.backend.addEventListener("ar_ab", (p) => fn(p as AbMessage));
+  }
 }
 
 /** Standalone-browser stand-in: one Gain mounted, params locally echoed,
@@ -54,6 +58,10 @@ class MockBridge implements Bridge {
   private rackListeners: ((msg: RackMessage) => void)[] = [];
   private paramListeners: ((msg: ParamsMessage) => void)[] = [];
   private meterListeners: ((msg: MetersMessage) => void)[] = [];
+  private abListeners: ((msg: AbMessage) => void)[] = [];
+
+  private banks: [Map<string, number>, Map<string, number>] = [new Map(), new Map()];
+  private activeBank = 0;
 
   // "?full" mounts every slot (frame-budget benchmark); "?demo" mounts one
   // of each module type (visual review).
@@ -76,6 +84,7 @@ class MockBridge implements Bridge {
       case "ready":
         queueMicrotask(() => {
           this.emitRack();
+          this.emitAb();
           this.emitAllParams();
         });
         break;
@@ -101,10 +110,37 @@ class MockBridge implements Bridge {
         this.emitRack();
         break;
       }
+      case "duplicate":
+        this.slots[event.to] = this.slots[event.from];
+        this.emitRack();
+        queueMicrotask(() => this.emitAllParams());
+        break;
+      case "abSelect": {
+        this.captureBank(this.activeBank);
+        this.activeBank = event.bank;
+        this.banks[this.activeBank].forEach((v, id) => this.params.set(id, v));
+        this.emitAb();
+        this.emitAllParams();
+        break;
+      }
+      case "abCopy":
+        this.captureBank(this.activeBank);
+        this.banks[1 - this.activeBank] = new Map(this.banks[this.activeBank]);
+        this.emitAb();
+        break;
       case "beginGesture":
       case "endGesture":
         break;
     }
+  }
+
+  private captureBank(bank: number): void {
+    this.banks[bank] = new Map(this.params);
+  }
+
+  private emitAb(): void {
+    const msg: AbMessage = { bank: this.activeBank };
+    this.abListeners.forEach((fn) => fn(msg));
   }
 
   onRack(fn: (msg: RackMessage) => void): void {
@@ -115,6 +151,9 @@ class MockBridge implements Bridge {
   }
   onMeters(fn: (msg: MetersMessage) => void): void {
     this.meterListeners.push(fn);
+  }
+  onAb(fn: (msg: AbMessage) => void): void {
+    this.abListeners.push(fn);
   }
 
   private schemaFor(id: string): { module: string; suffix: string } | null {

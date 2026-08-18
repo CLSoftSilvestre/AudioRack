@@ -46,8 +46,21 @@ body {
 /* Studio backdrop: soft top light and vignette. */
 .studio {
   position: relative;
+  display: flex;
   background:
     radial-gradient(120% 90% at 50% -10%, #2b2d33 0%, #1a1b1f 55%, #101114 100%);
+  overflow: hidden;
+}
+
+.workspace {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.stage-wrap {
+  flex: 1;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -55,8 +68,265 @@ body {
 .stage {
   width: 1060px;
   margin: 0 auto;
-  padding: 26px 0 60px;
+  padding: 14px 0 60px;
   transform-origin: top center;
+}
+
+/* ============================== MODULE BROWSER ============================== */
+
+.browser {
+  flex: 0 0 210px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #202227 0%, #17181b 100%);
+  border-right: 1px solid #000;
+  box-shadow: inset -6px 0 12px rgba(0, 0, 0, 0.4);
+}
+
+.browser-head {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.browser-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  color: #d6d9dc;
+}
+
+.browser-sub {
+  margin-top: 2px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #62666d;
+}
+
+.browser-list {
+  flex: 1;
+  padding: 8px;
+}
+
+.browser-group {
+  margin: 12px 6px 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #6d7178;
+}
+
+.browser-group:first-child {
+  margin-top: 2px;
+}
+
+.browser-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #34373d 0%, #2a2c31 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  touch-action: none;
+  transition: background 0.1s, transform 0.05s;
+}
+
+.browser-chip:hover {
+  background: linear-gradient(180deg, #3d4046 0%, #303338 100%);
+}
+
+.browser-chip:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+.chip-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e0d8;
+}
+
+.chip-u {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #8a8f96;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.browser-trash {
+  margin: 8px;
+  padding: 14px 10px;
+  border: 1px dashed #3a3d43;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #55595f;
+  transition: all 0.1s;
+}
+
+.browser.drop-remove {
+  box-shadow: inset 0 0 0 2px var(--led-red);
+}
+
+.browser.drop-remove .browser-trash {
+  border-color: var(--led-red);
+  color: #ff9a92;
+  background: rgba(255, 65, 54, 0.08);
+}
+
+/* ============================== TOP TOOLBAR ============================== */
+
+.rack-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 46px;
+  margin: 0 auto 12px;
+  padding: 0 18px;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0 1px, rgba(0, 0, 0, 0.04) 1px 2px),
+    linear-gradient(180deg, #2c2e33 0%, #232529 50%, #191a1d 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.toolbar-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.toolbar-logo {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #e8e6de;
+}
+
+.toolbar-logo span {
+  font-weight: 300;
+  color: #b7bbc2;
+}
+
+.toolbar-tag {
+  font-size: 8px;
+  letter-spacing: 0.28em;
+  color: #62666d;
+}
+
+.toolbar-ab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ab-label {
+  margin-right: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #6d7178;
+}
+
+.ab-btn,
+.ab-copy {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #c3c6cc;
+  padding: 6px 12px;
+  border: 1px solid #14151800;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3a3d43 0%, #2a2c31 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.ab-btn {
+  min-width: 34px;
+}
+
+.ab-btn:hover,
+.ab-copy:hover {
+  background: linear-gradient(180deg, #42454b 0%, #303339 100%);
+}
+
+.ab-btn.active {
+  color: #0c1a10;
+  background: linear-gradient(180deg, #7dffa0, var(--led-green));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 8px rgba(70, 224, 92, 0.5);
+}
+
+.ab-copy {
+  margin-left: 4px;
+  color: #9aa0a8;
+}
+
+/* ============================== DRAG & DROP ============================== */
+
+.drag-handle {
+  cursor: grab;
+}
+
+body.dragging,
+body.dragging * {
+  cursor: grabbing !important;
+}
+
+.drag-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e8e6de;
+  background: rgba(28, 30, 34, 0.95);
+  border: 1px solid #4a4d54;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Drop highlight painted above any mounted unit (::after stacks last). */
+.rack-slot.drop-ok::after,
+.rack-slot.drop-bad::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.rack-slot.drop-ok::after {
+  box-shadow: inset 0 0 0 3px var(--led-green);
+  background: rgba(70, 224, 92, 0.1);
+}
+
+.rack-slot.drop-bad::after {
+  box-shadow: inset 0 0 0 3px var(--led-red);
+  background: rgba(255, 65, 54, 0.08);
 }
 
 .dev-badge {

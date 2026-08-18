@@ -52,6 +52,7 @@ RackWebView::RackWebView (AudioRackProcessor& p)
         apvts.addParameterListener (ranged->paramID, this);
 
     processor.rackLayoutChanged.addChangeListener (this);
+    processor.abStateChanged.addChangeListener (this);
 
     auto options =
         juce::WebBrowserComponent::Options {}
@@ -80,6 +81,7 @@ RackWebView::~RackWebView()
 {
     stopTimer();
     processor.rackLayoutChanged.removeChangeListener (this);
+    processor.abStateChanged.removeChangeListener (this);
 
     for (auto* ranged : parameters)
         processor.parameterState().removeParameterListener (ranged->paramID, this);
@@ -114,6 +116,13 @@ void RackWebView::sendRackLayout()
     payload->setProperty ("modules", modules);
 
     web->emitEventIfBrowserIsVisible ("ar_rack", juce::var (payload));
+}
+
+void RackWebView::sendAbState()
+{
+    auto* payload = new juce::DynamicObject();
+    payload->setProperty ("bank", processor.activeBank());
+    web->emitEventIfBrowserIsVisible ("ar_ab", juce::var (payload));
 }
 
 void RackWebView::sendAllParameters()
@@ -225,6 +234,7 @@ void RackWebView::handleUiEvent (const juce::var& payload)
     if (type == "ready")
     {
         sendRackLayout();
+        sendAbState();
         sendAllParameters();
         return;
     }
@@ -268,13 +278,36 @@ void RackWebView::handleUiEvent (const juce::var& payload)
                               payload.getProperty ("to", 0));
         return;
     }
+
+    if (type == "duplicate")
+    {
+        processor.duplicateModule (payload.getProperty ("from", 0),
+                                   payload.getProperty ("to", 0));
+        return;
+    }
+
+    if (type == "abSelect")
+    {
+        processor.selectBank (payload.getProperty ("bank", 0));
+        return;
+    }
+
+    if (type == "abCopy")
+    {
+        processor.copyBankToOther();
+        return;
+    }
 }
 
 // --- listeners --------------------------------------------------------------------
 
-void RackWebView::changeListenerCallback (juce::ChangeBroadcaster*)
+void RackWebView::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
-    sendRackLayout();       // always message thread (ChangeBroadcaster is async)
+    // Both broadcasters fire on the message thread (ChangeBroadcaster is async).
+    if (source == &processor.abStateChanged)
+        sendAbState();
+    else
+        sendRackLayout();
 }
 
 void RackWebView::parameterChanged (const juce::String& parameterID, float)

@@ -3,6 +3,9 @@ import "./styles.css";
 import { createBridge } from "./bridge/juce";
 import { Store } from "./store";
 import { RackFrame } from "./rack/RackFrame";
+import { BrowserPanel } from "./rack/BrowserPanel";
+import { Toolbar } from "./rack/Toolbar";
+import { DragManager } from "./rack/dnd";
 import { pumpTicks } from "./animator";
 
 const app = document.getElementById("app")!;
@@ -10,13 +13,27 @@ app.className = "studio";
 
 const bridge = createBridge();
 const store = new Store(bridge);
+const drag = new DragManager(store);
+
+// Layout: [ module browser | scrollable stage (toolbar + rack) ].
+const workspace = document.createElement("div");
+workspace.className = "workspace";
+
+const browser = new BrowserPanel(store, drag);
+
+const stageWrap = document.createElement("div");
+stageWrap.className = "stage-wrap";
 
 const stage = document.createElement("div");
 stage.className = "stage";
 
-const rack = new RackFrame(store);
-stage.appendChild(rack.el);
-app.appendChild(stage);
+const toolbar = new Toolbar(store);
+const rack = new RackFrame(store, drag);
+stage.append(toolbar.el, rack.el);
+stageWrap.appendChild(stage);
+
+workspace.append(browser.el, stageWrap);
+app.appendChild(workspace);
 
 if (bridge.isMock) {
   const badge = document.createElement("div");
@@ -25,16 +42,17 @@ if (bridge.isMock) {
   app.appendChild(badge);
 }
 
-// The stage is designed at fixed logical pixels and scaled to fit the editor,
-// so faceplate geometry stays proportionally correct at every window size.
+// The stage (toolbar + rack) is designed at fixed logical pixels and scaled to
+// fit its column, so faceplate geometry stays proportionally correct at every
+// window size. The browser panel sits outside the scaled stage.
 const DESIGN_WIDTH = 1060;
 
 function rescale(): void {
-  const scale = app.clientWidth / DESIGN_WIDTH;
+  const scale = stageWrap.clientWidth / DESIGN_WIDTH;
   stage.style.transform = `scale(${scale})`;
 }
 
-new ResizeObserver(rescale).observe(app);
+new ResizeObserver(rescale).observe(stageWrap);
 rescale();
 
 // Tell the backend we're alive; it answers with rack layout + all params.
