@@ -74,6 +74,10 @@ juce_add_plugin(AudioRack
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     COPY_PLUGIN_AFTER_BUILD     FALSE
     NEEDS_WEBVIEW2              TRUE
+    # Without this the standalone's Info.plist has no NSMicrophoneUsageDescription,
+    # so macOS 10.14+ silently denies audio input (the app captures only silence).
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT  "AudioRack processes audio from the input device you select."
     VST3_CATEGORIES             Fx Dynamics EQ
     AU_MAIN_TYPE                kAudioUnitType_Effect)
 
