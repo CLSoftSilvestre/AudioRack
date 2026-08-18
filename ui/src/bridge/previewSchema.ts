@@ -45,7 +45,10 @@ function inv(min: number, max: number, centre: number, target: number): number {
 const EQ_DEFAULT_FREQS = [60, 150, 400, 1000, 3500, 10000];
 
 export const PREVIEW_SCHEMA: Record<string, PreviewParam[]> = {
-  gain: [{ suffix: "gaindb", default01: 0.5, format: (v) => `${(v * 72 - 60).toFixed(1)} dB` }],
+  gain: [
+    { suffix: "gaindb", default01: 0.5, format: (v) => `${(v * 72 - 60).toFixed(1)} dB` },
+    { suffix: "chmode", default01: 0, format: choice(["Stereo", "Mono", "Left", "Right"]) },
+  ],
 
   comp: [
     { suffix: "threshold", default01: 0.7, format: lin(-60, 0, "dB") },

@@ -31,6 +31,8 @@ void GainModule::declareParameters (ParameterBuilder& builder)
     range.setSkewForCentre (0.0f);
 
     builder.add ({ "gaindb", "Gain", range, 0.0f, "dB" });
+    builder.add ({ "chmode", "Channels", { 0.0f, 3.0f, 1.0f }, 0.0f, "",
+                   { "Stereo", "Mono", "Left", "Right" } });
 }
 
 void GainModule::prepare (double sampleRate, int, int)
@@ -54,6 +56,8 @@ void GainModule::bindParameter (const juce::String& idSuffix, std::atomic<float>
 {
     if (idSuffix == "gaindb" && value != nullptr)
         gainDb = value;
+    else if (idSuffix == "chmode" && value != nullptr)
+        chMode = value;
 }
 
 void GainModule::process (juce::dsp::AudioBlock<float>& block, const ProcessContext&) noexcept
@@ -63,6 +67,25 @@ void GainModule::process (juce::dsp::AudioBlock<float>& block, const ProcessCont
 
     const auto numSamples  = block.getNumSamples();
     const auto numChannels = block.getNumChannels();
+
+    // Channel conditioning (before the gain). Stereo (0) passes through; the
+    // others collapse to a mono signal duplicated across L and R.
+    const int mode = static_cast<int> (std::lround (chMode->load (std::memory_order_relaxed)));
+
+    if (mode != 0 && numChannels >= 2)
+    {
+        float* left  = block.getChannelPointer (0);
+        float* right = block.getChannelPointer (1);
+
+        for (size_t i = 0; i < numSamples; ++i)
+        {
+            const float m = mode == 1 ? 0.5f * (left[i] + right[i])   // Mono  (−6 dB sum)
+                          : mode == 2 ? left[i]                       // Left  → both
+                                      : right[i];                     // Right → both
+            left[i]  = m;
+            right[i] = m;
+        }
+    }
 
     for (size_t i = 0; i < numSamples; ++i)
     {
