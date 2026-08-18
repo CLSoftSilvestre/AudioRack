@@ -8,10 +8,9 @@
 import { Knob } from "../widgets/Knob";
 import { LedLadder } from "../widgets/LedLadder";
 import { VuMeter } from "../widgets/VuMeter";
-import { Switch } from "../widgets/Switch";
 import { screw } from "../widgets/Screw";
-import { paramSelector } from "./unitKit";
-import { paramID, slotParamID } from "../bridge/protocol";
+import { paramSelector, bypassControl } from "./unitKit";
+import { paramID } from "../bridge/protocol";
 import type { Store } from "../store";
 
 export class GainUnit {
@@ -38,14 +37,10 @@ export class GainUnit {
           <div class="silkscreen">LEVEL</div>
         </div>
         <div class="unit-section unit-vu-well"></div>
-        <div class="unit-section unit-bypass-well">
-          <div class="power-led"></div>
-        </div>
       </div>
       <div class="unit-ear right"></div>`;
 
     const gainId = paramID(slot, "gain", "gaindb");
-    const bypassId = slotParamID(slot, "bypass");
 
     // Rack-ear screws.
     for (const side of ["left", "right"] as const) {
@@ -88,21 +83,10 @@ export class GainUnit {
       }),
     );
 
-    // Bypass switch + power LED (lit = processing).
-    const bypassSwitch = new Switch({
-      label: "IN",
-      onChange: (on) => store.setParam(bypassId, on ? 0 : 1),
-    });
-    const led = this.el.querySelector<HTMLElement>(".power-led")!;
-    this.el.querySelector(".unit-bypass-well")!.prepend(bypassSwitch.el);
-    this.unsubscribers.push(
-      store.onParam(bypassId, (p) => {
-        const bypassed = p.value01 >= 0.5;
-        bypassSwitch.setOn(!bypassed);
-        led.classList.toggle("lit", !bypassed);
-        this.el.classList.toggle("bypassed", bypassed);
-      }),
-    );
+    // Unit on/off: illuminated rocker (lit red = processing).
+    const bypass = bypassControl(store, slot, this.el);
+    this.el.querySelector(".unit-face")!.appendChild(bypass.el);
+    this.unsubscribers.push(bypass.unsub);
   }
 
   dispose(): void {

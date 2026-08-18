@@ -723,6 +723,7 @@ body.dragging * {
 
 .dark-face .knob-label,
 .dark-face .switch-label,
+.dark-face .rocker-label,
 .dark-face .fader-label,
 .dark-face .display-label,
 .dark-face .silkscreen,
@@ -1530,6 +1531,124 @@ body.dragging * {
   box-shadow:
     0 0 7px rgba(70, 224, 92, 0.85),
     0 0 14px rgba(70, 224, 92, 0.4);
+}
+
+/* ===================== ILLUMINATED ROCKER (unit power) ===================== */
+
+.rocker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Black cross-hatched bezel the lens is recessed into. */
+.rocker-bezel {
+  position: relative;
+  width: 34px;
+  height: 46px;
+  padding: 4px;
+  border-radius: 7px;
+  perspective: 130px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.4) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #33353a 0%, #202225 45%, #131417 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 2px 3px rgba(0, 0, 0, 0.55);
+}
+
+/* Red lens; rocks on its X axis to show which side is pressed. */
+.rocker-face {
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  transform-style: preserve-3d;
+  transform: rotateX(-18deg); /* OFF: "O" (bottom) pressed in, "I" raised */
+  transform-origin: 50% 50%;
+  transition:
+    transform 0.13s cubic-bezier(0.2, 0.75, 0.3, 1),
+    background 0.13s ease,
+    box-shadow 0.13s ease;
+  background: linear-gradient(180deg, #7c1e22 0%, #56141a 46%, #390d11 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.62),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.rocker.on .rocker-face {
+  transform: rotateX(18deg); /* ON: "I" (top) pressed in */
+  background: linear-gradient(180deg, #ff6b60 0%, #ee242c 42%, #b0141b 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 190, 180, 0.55),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(120, 12, 16, 0.6),
+    0 0 9px rgba(240, 42, 46, 0.75),
+    0 0 20px rgba(240, 42, 46, 0.45);
+}
+
+/* Soft specular sheen across the upper curve of the lens. */
+.rocker-gloss {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  right: 3px;
+  height: 46%;
+  border-radius: 3px 3px 60% 60% / 3px 3px 90% 90%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.04));
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.rocker.on .rocker-gloss {
+  opacity: 0.8;
+}
+
+.rocker-glyph {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.rocker.on .rocker-glyph {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(90, 0, 0, 0.6);
+}
+
+.rocker-glyph.top {
+  top: 5px;
+  font-size: 14px;
+}
+
+.rocker-glyph.bottom {
+  bottom: 5px;
+  font-size: 11px;
+}
+
+.rocker-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(53, 50, 44, 0.85);
+}
+
+.rocker:focus-visible .rocker-bezel {
+  box-shadow:
+    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
+    0 0 0 2px rgba(120, 170, 255, 0.75);
 }
 
 /* ================================ FADER ================================ */
