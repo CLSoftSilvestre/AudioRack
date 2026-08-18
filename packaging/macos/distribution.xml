@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Product definition for productbuild. The pkg-ref filenames match the
+     component packages emitted by build_pkg.sh into build/installer/macos/
+     components/. Component versions are read from those packages. -->
+<installer-gui-script minSpecVersion="2">
+    <title>AudioRack</title>
+    <organization>com.audiorackproject</organization>
+
+    <welcome    file="welcome.html"    mime-type="text/html"/>
+    <license    file="license.txt"     mime-type="text/plain"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+
+    <!-- Runs on both Apple Silicon and Intel; payload architecture depends on
+         the build (use the macos-universal preset for a universal binary). -->
+    <options customize="always" require-scripts="false"
+             hostArchitectures="x86_64,arm64"/>
+
+    <choices-outline>
+        <line choice="vst3"/>
+        <line choice="au"/>
+        <line choice="standalone"/>
+    </choices-outline>
+
+    <choice id="vst3" title="VST3 Plug-in"
+            description="Installs AudioRack.vst3 to /Library/Audio/Plug-Ins/VST3.">
+        <pkg-ref id="com.audiorackproject.audiorack.vst3.pkg"/>
+    </choice>
+    <choice id="au" title="Audio Unit"
+            description="Installs AudioRack.component to /Library/Audio/Plug-Ins/Components.">
+        <pkg-ref id="com.audiorackproject.audiorack.au.pkg"/>
+    </choice>
+    <choice id="standalone" title="Standalone Application"
+            description="Installs AudioRack.app to /Applications.">
+        <pkg-ref id="com.audiorackproject.audiorack.standalone.pkg"/>
+    </choice>
+
+    <pkg-ref id="com.audiorackproject.audiorack.vst3.pkg">vst3.pkg</pkg-ref>
+    <pkg-ref id="com.audiorackproject.audiorack.au.pkg">au.pkg</pkg-ref>
+    <pkg-ref id="com.audiorackproject.audiorack.standalone.pkg">standalone.pkg</pkg-ref>
+</installer-gui-script>

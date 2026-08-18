@@ -1,0 +1,4 @@
+# Installer outputs and downloaded redistributables — never committed.
+windows/Output/
+windows/redist/*.exe
+macos/*.pkg

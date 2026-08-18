@@ -1,5 +1,43 @@
 # Progress
 
+## 2026-08-18 (M8b) — installers + signing/notarisation docs
+
+Second slice of M8 (Ship). See ADR 0008.
+
+### Done
+
+- **macOS installer** (`packaging/macos/`) — `build_pkg.sh` builds one
+  `pkgbuild` component package per format (VST3 → `/Library/Audio/Plug-Ins/VST3`,
+  AU → `.../Components`, Standalone → `/Applications`) and wraps them with
+  `productbuild` + `distribution.xml` into a single customisable `.pkg` (three
+  deselectable choices, AGPLv3 licence pane, welcome/conclusion). Signing +
+  notarisation are opt-in via `APP_SIGN_ID` / `INSTALLER_SIGN_ID` /
+  `NOTARY_PROFILE`, so the same script produces an unsigned dev build or a
+  signed+notarised release build.
+- **Windows installer** (`packaging/windows/audiorack.iss`) — Inno Setup script:
+  VST3 → `Common Files\VST3`, standalone → Program Files, both deselectable;
+  bundles and silently installs the Edge **WebView2** runtime only when absent
+  (`NeedsWebView2`). Bootstrapper is git-ignored, not vendored.
+- **Signing/notarisation runbook** (`docs/SIGNING.md`) — Developer ID
+  Application/Installer + `notarytool`/`stapler` for macOS; `signtool` for
+  Windows; hardened-runtime mic entitlement note; release checklist.
+
+### Verified
+
+- **Unsigned macOS `.pkg` built and inspected in-repo**: 12 MB, three component
+  packages with correct identifiers and `install-location`s (via
+  `pkgutil --expand` + `PackageInfo`). VST3/AU/Standalone all present.
+- Windows `.iss` and all signing/notarisation steps are **documented but not
+  exercised here** (no Windows host, no paid Apple Developer account, no full
+  Xcode) — see the note in `docs/SIGNING.md`.
+
+### Next (M8c)
+
+User manual: install, the rack UX, every module + parameters, MIDI learn, A/B,
+presets. Still open: signed/notarised release builds; a universal macOS binary;
+the Windows installer compiled on a real Windows machine; host-automation
+hands-on pass in a real DAW.
+
 ## 2026-08-18 (M8a) — crash-safe standalone state + performance pass
 
 First slice of M8 (Ship). See ADR 0007.

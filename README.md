@@ -22,7 +22,8 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M7a — Rack UX: browser, drag & drop, reorder, duplicate, A/B | ✅ |
 | M7b — MIDI learn (right-click any knob/switch) | ✅ |
 | M8a — Crash-safe standalone state + performance pass | ✅ |
-| M8b/c — Installers, signing/notarisation docs, user manual | ⏳ |
+| M8b — Installers (macOS pkg, Windows InnoSetup) + signing docs | ✅ |
+| M8c — User manual | ⏳ |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md).
 
@@ -50,6 +51,17 @@ ctest --preset macos
 The web UI is developed independently under `ui/` (`npm run dev` for the
 widget dev page, `npm run build` to produce the bundle embedded into the
 plugin).
+
+## Installers
+
+Build a macOS `.pkg` or a Windows installer from the release artefacts — see
+[packaging/](packaging/README.md). Code signing and notarisation are documented
+in [docs/SIGNING.md](docs/SIGNING.md).
+
+```sh
+cmake --build --preset macos          # build the plugin first
+packaging/macos/build_pkg.sh          # -> build/installer/macos/AudioRack-<version>.pkg
+```
 
 ## Licence
 
