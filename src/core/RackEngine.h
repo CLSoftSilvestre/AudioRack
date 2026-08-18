@@ -11,6 +11,13 @@
 namespace audiorack
 {
 
+/// One meter snapshot tagged with its slot, shipped audio -> UI per block.
+struct SlotMeterFrame
+{
+    int        slot = 0;
+    MeterFrame frame;
+};
+
 /** Ordered serial chain of rack modules (v1 routing: strictly top-to-bottom).
 
     Threading model:
@@ -58,6 +65,11 @@ public:
     /// Sum of mounted modules' latencies, updated on structural change.
     int latencySamples() const noexcept { return totalLatency.load (std::memory_order_relaxed); }
 
+    /// UI thread: drains the meter ring buffer (poll at ~60 Hz and fold —
+    /// take the max peak across drained frames so short peaks between polls
+    /// are never lost, even if a UI frame is dropped).
+    bool popMeterFrame (SlotMeterFrame& out) noexcept { return meters.pop (out); }
+
 private:
     void applyCommand (const RackCommand&) noexcept;
     void discard (AudioModule*) noexcept;
@@ -69,6 +81,8 @@ private:
     SpscQueue<RackCommand, 64>   commands;   // message -> audio
     SpscQueue<AudioModule*, 256> disposal;   // audio -> message; sized so it cannot fill
                                              // (each command displaces at most one module)
+    SpscQueue<SlotMeterFrame, 4096> meters;  // audio -> UI; overflow drops frames, which the
+                                             // 60 Hz drain makes practically unreachable
 
     juce::AudioBuffer<float> dryBuffer;      // preallocated wet/dry scratch
 

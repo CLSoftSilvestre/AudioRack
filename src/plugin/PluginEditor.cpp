@@ -3,26 +3,35 @@
 namespace audiorack
 {
 
-AudioRackEditor::AudioRackEditor (AudioRackProcessor& p)
-    : juce::AudioProcessorEditor (p)
+namespace
 {
-    setSize (480, 200);
+    constexpr int  kDefaultWidth  = 1100;
+    constexpr int  kDefaultHeight = 740;
+    constexpr double kAspect      = static_cast<double> (kDefaultWidth) / kDefaultHeight;
 }
 
-void AudioRackEditor::paint (juce::Graphics& g)
+AudioRackEditor::AudioRackEditor (AudioRackProcessor& p)
+    : juce::AudioProcessorEditor (p),
+      rackProcessor (p),
+      webView (p)
 {
-    g.fillAll (juce::Colour (0xff1a1c1e));
+    addAndMakeVisible (webView);
 
-    g.setColour (juce::Colour (0xffd6d9dc));
-    g.setFont (juce::FontOptions (22.0f, juce::Font::bold));
-    g.drawText ("AudioRack", getLocalBounds().removeFromTop (getHeight() / 2),
-                juce::Justification::centredBottom);
+    setResizable (true, true);
+    setResizeLimits (770, static_cast<int> (770 / kAspect), 2200, static_cast<int> (2200 / kAspect));
 
-    g.setColour (juce::Colour (0xff7a8288));
-    g.setFont (juce::FontOptions (14.0f));
-    g.drawText ("M0 skeleton - audio passthrough",
-                getLocalBounds().removeFromBottom (getHeight() / 2),
-                juce::Justification::centredTop);
+    if (auto* constrainer = getConstrainer())
+        constrainer->setFixedAspectRatio (kAspect);
+
+    const auto stored = rackProcessor.editorSize();
+    setSize (stored.x > 0 ? stored.x : kDefaultWidth,
+             stored.y > 0 ? stored.y : kDefaultHeight);
+}
+
+void AudioRackEditor::resized()
+{
+    webView.setBounds (getLocalBounds());
+    rackProcessor.setEditorSize ({ getWidth(), getHeight() });
 }
 
 } // namespace audiorack

@@ -1,0 +1,142 @@
+/** Backlit VU meter with true needle ballistics.
+ *
+ *  The movement is modelled as the classic underdamped second-order system of
+ *  a real VU (ANSI C16.5: 99% deflection in 300 ms, ~1% overshoot), i.e.
+ *  natural frequency ~2.1 Hz, damping ratio ~0.85:
+ *
+ *      x'' = w^2 (target - x) - 2 z w x'
+ *
+ *  integrated per animation frame. Scale is -20..+3 VU over -46..+46 degrees.
+ *  A peak LED latches for 500 ms above 0 VU.
+ */
+
+import { addTick } from "../animator";
+import { dbFromLinear } from "../types";
+
+const OMEGA = 2 * Math.PI * 2.1;
+const ZETA = 0.85;
+const ANGLE_MIN = -46;
+const ANGLE_MAX = 46;
+const DB_MIN = -20;
+const DB_MAX = 3;
+
+export class VuMeter {
+  readonly el: HTMLElement;
+
+  private needle: HTMLElement;
+  private peakLed: HTMLElement;
+
+  private position = 0;   // current needle deflection, 0..1
+  private velocity = 0;
+  private target = 0;
+  private peakHold = 0;
+  private removeTick: () => void;
+
+  constructor(label = "VU") {
+    this.el = document.createElement("div");
+    this.el.className = "vu";
+    this.el.setAttribute("role", "meter");
+    this.el.setAttribute("aria-label", `${label} meter`);
+
+    this.el.innerHTML = `
+      <div class="vu-face">
+        ${this.faceSvg()}
+        <div class="vu-needle"></div>
+        <div class="vu-pivot"></div>
+        <div class="vu-glass"></div>
+        <div class="vu-peak-led" title="peak"></div>
+      </div>`;
+
+    this.needle = this.el.querySelector<HTMLElement>(".vu-needle")!;
+    this.peakLed = this.el.querySelector<HTMLElement>(".vu-peak-led")!;
+
+    this.removeTick = addTick((dt) => this.tick(dt));
+  }
+
+  dispose(): void {
+    this.removeTick();
+  }
+
+  /** Feed with a linear signal level (RMS-ish); 1.0 = 0 VU. */
+  setLevel(linear: number): void {
+    this.target = deflectionFromLinear(linear);
+    if (dbFromLinear(linear) > 0) this.peakHold = 0.5;
+  }
+
+  private tick(dt: number): void {
+    const accel =
+      OMEGA * OMEGA * (this.target - this.position) - 2 * ZETA * OMEGA * this.velocity;
+    this.velocity += accel * dt;
+    this.position += this.velocity * dt;
+
+    if (this.position < 0) {
+      this.position = 0;
+      this.velocity = Math.max(0, this.velocity); // mechanical end stop
+    } else if (this.position > 1.06) {
+      this.position = 1.06; // slam past +3 into the pin, like hardware
+      this.velocity = Math.min(0, this.velocity);
+    }
+
+    const angle = ANGLE_MIN + this.position * (ANGLE_MAX - ANGLE_MIN);
+    this.needle.style.transform = `rotate(${angle}deg)`;
+
+    this.peakHold = Math.max(0, this.peakHold - dt);
+    this.peakLed.classList.toggle("lit", this.peakHold > 0);
+  }
+
+  private faceSvg(): string {
+    // Design box 200x110; needle pivot sits below the visible face at (100, 128).
+    const cx = 100;
+    const cy = 128;
+    const rOuter = 102;
+
+    const angleForDb = (db: number): number =>
+      ANGLE_MIN + ((db - DB_MIN) / (DB_MAX - DB_MIN)) * (ANGLE_MAX - ANGLE_MIN);
+
+    const point = (angleDeg: number, r: number): [number, number] => {
+      const a = ((angleDeg - 90) * Math.PI) / 180;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    };
+
+    // Red arc from 0 VU to +3.
+    const [rx1, ry1] = point(angleForDb(0), rOuter - 9);
+    const [rx2, ry2] = point(ANGLE_MAX, rOuter - 9);
+
+    let ticks = "";
+    const majors: [number, string][] = [
+      [-20, "20"], [-10, "10"], [-7, "7"], [-5, "5"], [-3, "3"],
+      [-2, "2"], [-1, "1"], [0, "0"], [1, "+1"], [2, "+2"], [3, "+3"],
+    ];
+
+    for (const [db, legend] of majors) {
+      const a = angleForDb(db);
+      const [x1, y1] = point(a, rOuter - 14);
+      const [x2, y2] = point(a, rOuter - 7);
+      const [tx, ty] = point(a, rOuter - 20);
+      const red = db >= 0 ? " red" : "";
+      ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="vu-tick${red}"/>
+                <text x="${tx}" y="${ty}" text-anchor="middle" class="vu-text${red}">${legend}</text>`;
+    }
+
+    for (let db = -20; db <= 3; db++) {
+      const a = angleForDb(db);
+      const [x1, y1] = point(a, rOuter - 11);
+      const [x2, y2] = point(a, rOuter - 7);
+      ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="vu-tick minor${db >= 0 ? " red" : ""}"/>`;
+    }
+
+    return `<svg class="vu-scale" viewBox="0 0 200 110" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+        <path d="M ${rx1} ${ry1} A ${rOuter - 9} ${rOuter - 9} 0 0 1 ${rx2} ${ry2}"
+              class="vu-red-arc"/>
+        ${ticks}
+        <text x="100" y="92" text-anchor="middle" class="vu-brand">VU</text>
+      </svg>`;
+  }
+}
+
+/** Map linear level to 0..1 needle deflection across the -20..+3 dB scale. */
+function deflectionFromLinear(linear: number): number {
+  const db = dbFromLinear(linear);
+  const clamped = Math.min(DB_MAX + 0.5, Math.max(DB_MIN - 6, db));
+  return Math.min(1.06, Math.max(0, (clamped - DB_MIN) / (DB_MAX - DB_MIN)));
+}

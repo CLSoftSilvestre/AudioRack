@@ -105,8 +105,9 @@ void RackEngine::process (juce::dsp::AudioBlock<float>& block, const TransportIn
     const auto blockChans  = static_cast<int> (block.getNumChannels());
     const auto mixChannels = juce::jmin (blockChans, dryBuffer.getNumChannels());
 
-    for (auto& s : slots)
+    for (int slotIndex = 0; slotIndex < kMaxSlots; ++slotIndex)
     {
+        auto& s = slots[static_cast<size_t> (slotIndex)];
         s.wetGain.setTargetValue (s.targetWetGain());
 
         auto* module = s.module;
@@ -130,6 +131,12 @@ void RackEngine::process (juce::dsp::AudioBlock<float>& block, const TransportIn
                 dryBuffer.copyFrom (ch, 0, block.getChannelPointer (static_cast<size_t> (ch)), numSamples);
 
         module->process (block, transport);
+
+        {
+            SlotMeterFrame meterFrame { slotIndex, {} };
+            module->getMeterFrame (meterFrame.frame);
+            meters.push (meterFrame);          // full queue: drop, UI folds what arrives
+        }
 
         if (! needsMix)
             continue;
