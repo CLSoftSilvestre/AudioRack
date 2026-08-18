@@ -40,11 +40,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout AudioRackProcessor::createPa
             type.declareParameters (builder);
 
             for (const auto& spec : builder.specs())
-                layout.add (std::make_unique<juce::AudioParameterFloat> (
-                    juce::ParameterID { makeParamID (slot, type.descriptor.id, spec.idSuffix), 1 },
-                    slotLabel + " " + type.descriptor.name + " " + spec.displayName,
-                    spec.range, spec.defaultValue,
-                    juce::AudioParameterFloatAttributes().withLabel (spec.unit)));
+            {
+                const juce::ParameterID id { makeParamID (slot, type.descriptor.id, spec.idSuffix), 1 };
+                const auto name = slotLabel + " " + type.descriptor.name + " " + spec.displayName;
+
+                if (spec.isChoice())
+                    layout.add (std::make_unique<juce::AudioParameterChoice> (
+                        id, name, spec.choices, static_cast<int> (spec.defaultValue)));
+                else
+                    layout.add (std::make_unique<juce::AudioParameterFloat> (
+                        id, name, spec.range, spec.defaultValue,
+                        juce::AudioParameterFloatAttributes().withLabel (spec.unit)));
+            }
         }
     }
 
@@ -248,7 +255,23 @@ void AudioRackProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     auto mainBus = getBusBuffer (buffer, false, 0);
     juce::dsp::AudioBlock<float> block (mainBus);
 
-    engine.process (block, currentTransport());
+    ProcessContext context;
+    context.transport = currentTransport();
+
+    if (const auto* sidechainBus = getBus (true, 1);
+        sidechainBus != nullptr && sidechainBus->isEnabled())
+    {
+        const auto sidechain = getBusBuffer (buffer, true, 1);
+
+        if (sidechain.getNumChannels() > 0)
+        {
+            context.sidechain            = sidechain.getArrayOfReadPointers();
+            context.numSidechainChannels = sidechain.getNumChannels();
+            context.numSidechainSamples  = sidechain.getNumSamples();
+        }
+    }
+
+    engine.process (block, context);
 }
 
 void AudioRackProcessor::timerCallback()

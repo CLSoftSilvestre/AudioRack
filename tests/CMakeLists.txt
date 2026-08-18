@@ -1,7 +1,8 @@
 set(AUDIORACK_TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/SanityTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SpscQueueTests.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/RackEngineTests.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/RackEngineTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DynamicsTests.cpp)
 
 add_executable(audiorack_tests
     ${AUDIORACK_TEST_SOURCES}

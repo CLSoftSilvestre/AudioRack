@@ -23,7 +23,7 @@ public:
     void reset() override;
     void bindParameter (const juce::String& idSuffix, std::atomic<float>* value) override;
 
-    void process (juce::dsp::AudioBlock<float>& block, const TransportInfo&) noexcept override;
+    void process (juce::dsp::AudioBlock<float>& block, const ProcessContext&) noexcept override;
     void getMeterFrame (MeterFrame&) const noexcept override;
 
 private:

@@ -17,7 +17,8 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M2 — Parameters & state | ✅ |
 | M3 — WebView UI shell | ✅ |
 | M4 — Widget library | ✅ |
-| M5+ — DSP module set, rack UX, shipping | ⏳ |
+| M5 — Core dynamics (compressor, limiter, gate) | ✅ |
+| M6+ — EQ/time-domain modules, rack UX, shipping | ⏳ |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md).
 

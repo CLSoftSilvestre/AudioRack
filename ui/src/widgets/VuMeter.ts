@@ -32,11 +32,12 @@ export class VuMeter {
   private peakHold = 0;
   private removeTick: () => void;
 
-  constructor(label = "VU") {
+  constructor(label = "VU", private mode: "vu" | "gr" = "vu") {
     this.el = document.createElement("div");
     this.el.className = "vu";
     this.el.setAttribute("role", "meter");
     this.el.setAttribute("aria-label", `${label} meter`);
+    if (mode === "gr") this.position = 1; // GR needle rests at 0 (right)
 
     this.el.innerHTML = `
       <div class="vu-face">
@@ -61,6 +62,13 @@ export class VuMeter {
   setLevel(linear: number): void {
     this.target = deflectionFromLinear(linear);
     if (dbFromLinear(linear) > 0) this.peakHold = 0.5;
+  }
+
+  /** GR mode: needle falls from 0 (right) as reduction increases. */
+  setGrDb(db: number): void {
+    const range = DB_MAX - DB_MIN; // 23 dB of scale travel
+    this.target = Math.min(1.06, Math.max(0, 1 - Math.max(0, db) / range));
+    if (db > 10) this.peakHold = 0.5;
   }
 
   private tick(dt: number): void {
@@ -103,17 +111,19 @@ export class VuMeter {
     const [rx2, ry2] = point(ANGLE_MAX, rOuter - 9);
 
     let ticks = "";
-    const majors: [number, string][] = [
-      [-20, "20"], [-10, "10"], [-7, "7"], [-5, "5"], [-3, "3"],
-      [-2, "2"], [-1, "1"], [0, "0"], [1, "+1"], [2, "+2"], [3, "+3"],
-    ];
+    const majors: [number, string][] =
+      this.mode === "gr"
+        ? // GR scale: 0 dB of reduction sits at the right-hand rest position.
+          [[-20, "20"], [-15, "15"], [-10, "10"], [-6, "6"], [-3, "3"], [-1, "1"], [3, "0"]]
+        : [[-20, "20"], [-10, "10"], [-7, "7"], [-5, "5"], [-3, "3"],
+           [-2, "2"], [-1, "1"], [0, "0"], [1, "+1"], [2, "+2"], [3, "+3"]];
 
     for (const [db, legend] of majors) {
       const a = angleForDb(db);
       const [x1, y1] = point(a, rOuter - 14);
       const [x2, y2] = point(a, rOuter - 7);
       const [tx, ty] = point(a, rOuter - 20);
-      const red = db >= 0 ? " red" : "";
+      const red = this.mode === "vu" && db >= 0 ? " red" : "";
       ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="vu-tick${red}"/>
                 <text x="${tx}" y="${ty}" text-anchor="middle" class="vu-text${red}">${legend}</text>`;
     }
@@ -125,11 +135,16 @@ export class VuMeter {
       ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="vu-tick minor${db >= 0 ? " red" : ""}"/>`;
     }
 
+    const redArc =
+      this.mode === "vu"
+        ? `<path d="M ${rx1} ${ry1} A ${rOuter - 9} ${rOuter - 9} 0 0 1 ${rx2} ${ry2}" class="vu-red-arc"/>`
+        : "";
+    const brand = this.mode === "gr" ? "GR" : "VU";
+
     return `<svg class="vu-scale" viewBox="0 0 200 110" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-        <path d="M ${rx1} ${ry1} A ${rOuter - 9} ${rOuter - 9} 0 0 1 ${rx2} ${ry2}"
-              class="vu-red-arc"/>
+        ${redArc}
         ${ticks}
-        <text x="100" y="92" text-anchor="middle" class="vu-brand">VU</text>
+        <text x="100" y="92" text-anchor="middle" class="vu-brand">${brand}</text>
       </svg>`;
   }
 }

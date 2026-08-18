@@ -56,7 +56,7 @@ void GainModule::bindParameter (const juce::String& idSuffix, std::atomic<float>
         gainDb = value;
 }
 
-void GainModule::process (juce::dsp::AudioBlock<float>& block, const TransportInfo&) noexcept
+void GainModule::process (juce::dsp::AudioBlock<float>& block, const ProcessContext&) noexcept
 {
     gain.setTargetValue (
         juce::Decibels::decibelsToGain (gainDb->load (std::memory_order_relaxed), kMinusInfDb));

@@ -25,6 +25,13 @@ namespace
     }
 } // namespace
 
+static juce::String parameterDisplayText (const juce::RangedAudioParameter& p)
+{
+    const auto label = p.getLabel();
+    return label.isEmpty() ? p.getCurrentValueAsText()
+                           : p.getCurrentValueAsText() + " " + label;
+}
+
 RackWebView::RackWebView (AudioRackProcessor& p)
     : processor (p)
 {
@@ -118,7 +125,7 @@ void RackWebView::sendAllParameters()
         juce::Array<juce::var> entry;
         entry.add (ranged->paramID);
         entry.add (ranged->getValue());
-        entry.add (ranged->getCurrentValueAsText());
+        entry.add (parameterDisplayText (*ranged));
         batch.add (juce::var (entry));
     }
 
@@ -141,7 +148,7 @@ void RackWebView::flushDirtyParameters()
         juce::Array<juce::var> entry;
         entry.add (ranged->paramID);
         entry.add (ranged->getValue());
-        entry.add (ranged->getCurrentValueAsText());
+        entry.add (parameterDisplayText (*ranged));
         batch.add (juce::var (entry));
     }
 

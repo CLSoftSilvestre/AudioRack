@@ -40,7 +40,7 @@ public:
     virtual void bindParameter (const juce::String& idSuffix, std::atomic<float>* value) = 0;
 
     // Audio thread — must be realtime-safe
-    virtual void process (juce::dsp::AudioBlock<float>& block, const TransportInfo& transport) noexcept = 0;
+    virtual void process (juce::dsp::AudioBlock<float>& block, const ProcessContext& context) noexcept = 0;
 
     virtual int  latencySamples() const noexcept { return 0; }
     virtual void getMeterFrame (MeterFrame&) const noexcept {}

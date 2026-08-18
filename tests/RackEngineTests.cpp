@@ -29,7 +29,7 @@ struct TestModule final : AudioModule
     void prepare (double, int, int) override {}
     void reset() override {}
     void bindParameter (const juce::String&, std::atomic<float>*) override {}
-    void process (juce::dsp::AudioBlock<float>&, const TransportInfo&) noexcept override {}
+    void process (juce::dsp::AudioBlock<float>&, const ProcessContext&) noexcept override {}
     int latencySamples() const noexcept override { return reportedLatency; }
 
     int reportedLatency = 0;

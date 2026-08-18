@@ -1,5 +1,48 @@
 # Progress
 
+## 2026-08-18 (later) — M5 core dynamics
+
+### Done
+
+- **ProcessContext** (ADR 0003): modules now receive transport + external
+  sidechain bus pointers in one struct; processor forwards the host's
+  sidechain bus when enabled.
+- **Compressor (CMP-2, 2U)** — Giannoulis/Massberg/Reiss dB-domain design:
+  FF/FB topologies, peak/RMS, quadratic soft knee, decoupled attack/release
+  smoothing, program-dependent release (τ scaled 0.25–4× by 1 s GR average),
+  RBJ sidechain HPF, external sidechain, auto-makeup (−G(0)/2), GR metering.
+- **Limiter (LM-1, 1U)** — lookahead sliding-min + cascaded-boxcar gain chain
+  (no overshoot by construction), 4× oversampled true-peak detection on the
+  detector only, honest latency (lookahead + FIR delay) reported per block.
+- **Gate (GT-1, 1U)** — hysteresis state machine, hold, range, SC HPF,
+  external SC, audio-only lookahead delay reported as latency.
+- **Choice parameters**: `ParamSpec.choices` → `AudioParameterChoice`; hosts
+  now show "Feed-Forward/Feed-Back" etc. APVTS grew to 324 parameters
+  (12 slots × 27); pluginval strictness 10 still passes, zero warnings.
+- **UI**: three new faceplates with distinct hardware identities (charcoal
+  CMP-2 with GR VU needle meter, black/red LM-1 with GR LED strip + TP LED,
+  steel-blue GT-1 with OPEN status LED), GR mode for the VU meter widget,
+  horizontal GrLadder widget, module picker on empty slots, 2U slot heights.
+
+### Measured (tests/DynamicsTests.cpp — 15 new tests, 26 total green)
+
+- Compressor static curve slope 1/R ±0.06; knee GR at threshold 1.125 dB
+  ±0.6; attack 63% point inside [4, 30] ms for τ=10 ms; release 37% point
+  inside [80, 500] ms for τ=200 ms.
+- Limiter: impulse latency == `latencySamples()` exactly; null vs delayed
+  input < 1e-4 at −12 dB; hostile +6 dB programme never exceeds ceiling
+  ×1.0001.
+- Gate: ≥50 dB attenuation closed; opens <10 ms; hold/release tail timed via
+  −50 dB probe; no chatter inside hysteresis window; lookahead preserves
+  ≥1.5× more transient.
+
+### Next (M6 — time & tone)
+
+EQ (6-band, live magnitude curve), Delay (digital+tape, host sync,
+ping-pong, wow/flutter), Reverb (FDN or Dattorro), Saturator (oversampled
+waveshaping), shared oversampling helper, transport sync plumbing (bpm/ppq
+already in TransportInfo).
+
 ## 2026-08-18 — M0 through M4 (initial session)
 
 ### Done

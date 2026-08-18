@@ -54,10 +54,13 @@ class MockBridge implements Bridge {
   private paramListeners: ((msg: ParamsMessage) => void)[] = [];
   private meterListeners: ((msg: MetersMessage) => void)[] = [];
 
-  // "?full" mounts every slot — used by the frame-budget benchmark.
-  private slots: string[] = Array.from({ length: MAX_SLOTS }, (_, i) =>
-    window.location.search.includes("full") || i === 0 ? "gain" : "",
-  );
+  // "?full" mounts every slot (frame-budget benchmark); "?demo" mounts one
+  // of each module type (visual review).
+  private slots: string[] = window.location.search.includes("demo")
+    ? ["gain", "comp", "lim", "gate", ...Array.from({ length: MAX_SLOTS - 4 }, () => "")]
+    : Array.from({ length: MAX_SLOTS }, (_, i) =>
+        window.location.search.includes("full") || i === 0 ? "gain" : "",
+      );
   private params = new Map<string, number>();
 
   constructor() {
@@ -135,7 +138,12 @@ class MockBridge implements Bridge {
   private emitRack(): void {
     const msg: RackMessage = {
       slots: [...this.slots],
-      modules: [{ id: "gain", name: "Gain", category: "Utility", units: 1 }],
+      modules: [
+        { id: "gain", name: "Gain", category: "Utility", units: 1 },
+        { id: "comp", name: "Compressor", category: "Dynamics", units: 2 },
+        { id: "lim", name: "Limiter", category: "Dynamics", units: 1 },
+        { id: "gate", name: "Gate", category: "Dynamics", units: 1 },
+      ],
     };
     this.rackListeners.forEach((fn) => fn(msg));
   }
@@ -157,7 +165,8 @@ class MockBridge implements Bridge {
     const m: MetersMessage["m"] = [];
 
     for (let slot = 0; slot < MAX_SLOTS; slot++) {
-      if (this.slots[slot] === "") continue;
+      const moduleId = this.slots[slot];
+      if (moduleId === "") continue;
       const gain = gainLinearFrom01(this.value01(`slot${slot}.gain.gaindb`));
       const bypassed = this.value01(`slot${slot}.bypass`) >= 0.5;
       const music =
@@ -166,7 +175,12 @@ class MockBridge implements Bridge {
         0.2 * Math.sin(this.phase * 7.7) +
         0.1 * Math.random();
       const level = bypassed ? 0 : Math.max(0, music) * gain;
-      m.push([slot, level * 1.25, level * 1.18, level * 0.72, level * 0.7, 0]);
+      // Dynamics modules show a plausible pumping GR in browser preview.
+      const gr =
+        moduleId !== "gain" && !bypassed
+          ? Math.max(0, 5 + 5 * Math.sin(this.phase * 2.5 + slot * 1.3))
+          : 0;
+      m.push([slot, level * 1.25, level * 1.18, level * 0.72, level * 0.7, gr]);
     }
 
     if (m.length > 0) this.meterListeners.forEach((fn) => fn({ m }));

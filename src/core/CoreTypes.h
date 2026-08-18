@@ -38,4 +38,16 @@ struct MeterFrame
     float gainReductionDb = 0.0f;
 };
 
+/// Everything a module receives per block besides the audio itself.
+/// `sidechain` points at the host's external sidechain input bus for this
+/// block (nullptr when the bus is disabled); it is read-only and valid only
+/// for the duration of the process() call.
+struct ProcessContext
+{
+    TransportInfo transport;
+    const float* const* sidechain = nullptr;
+    int numSidechainChannels      = 0;
+    int numSidechainSamples       = 0;
+};
+
 } // namespace audiorack

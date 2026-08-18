@@ -20,6 +20,10 @@ struct ParamSpec
     juce::NormalisableRange<float> range;
     float                          defaultValue = 0.0f;
     juce::String                   unit;       ///< "dB", "ms", "Hz", "%", ""
+    juce::StringArray              choices {}; ///< non-empty => discrete choice parameter;
+                                               ///< range/defaultValue are then index-valued
+
+    bool isChoice() const noexcept { return ! choices.isEmpty(); }
 };
 
 /// Collects ParamSpecs from a module's static declareParameters().

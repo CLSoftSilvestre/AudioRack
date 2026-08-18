@@ -1,6 +1,9 @@
 #include "ModuleRegistry.h"
 
 #include "../dsp/gain/GainModule.h"
+#include "../dsp/compressor/CompressorModule.h"
+#include "../dsp/limiter/LimiterModule.h"
+#include "../dsp/gate/GateModule.h"
 
 namespace audiorack
 {
@@ -40,7 +43,10 @@ void registerBuiltinModules()
         return;
 
     registry.add (GainModule::typeInfo());
-    // One line per module lands here as milestones M5/M6 add them.
+    registry.add (CompressorModule::typeInfo());
+    registry.add (LimiterModule::typeInfo());
+    registry.add (GateModule::typeInfo());
+    // One line per module lands here as milestone M6 adds them.
 }
 
 } // namespace audiorack

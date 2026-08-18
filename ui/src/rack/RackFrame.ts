@@ -2,17 +2,32 @@
  *  mounted units. Rebuilds units only when the layout actually changes;
  *  meter/param updates never touch this layer.
  *
- *  Interactions here are the M3 minimum: double-click an empty slot to mount
- *  a module, right-click a unit for bypass/remove. Drag-reorder, A/B and the
- *  browser panel arrive with M7.
+ *  Interactions here are the pre-M7 minimum: double-click an empty slot for
+ *  a module picker, right-click a unit for bypass/remove. Drag-reorder, A/B
+ *  and the browser panel arrive with M7.
  */
 
 import { GainUnit } from "../units/GainUnit";
+import { CompressorUnit } from "../units/CompressorUnit";
+import { LimiterUnit } from "../units/LimiterUnit";
+import { GateUnit } from "../units/GateUnit";
 import { MAX_SLOTS, slotParamID } from "../bridge/protocol";
 import type { Store } from "../store";
 
+interface UnitInstance {
+  el: HTMLElement;
+  dispose(): void;
+}
+
+const UNIT_FACTORY: Record<string, new (store: Store, slot: number) => UnitInstance> = {
+  gain: GainUnit,
+  comp: CompressorUnit,
+  lim: LimiterUnit,
+  gate: GateUnit,
+};
+
 interface Mounted {
-  unit: GainUnit;
+  unit: UnitInstance;
   moduleId: string;
 }
 
@@ -43,16 +58,13 @@ export class RackFrame {
           <div class="blank-hint">double-click to mount a module</div>
         </div>`;
 
-      slotEl.addEventListener("dblclick", () => {
-        if (!this.mounted.has(slot)) {
-          const first = this.store.availableModules()[0];
-          if (first) this.store.mount(slot, first.id);
-        }
+      slotEl.addEventListener("dblclick", (e) => {
+        if (!this.mounted.has(slot)) this.openModulePicker(e, slot);
       });
 
       slotEl.addEventListener("contextmenu", (e) => {
         e.preventDefault();
-        if (this.mounted.has(slot)) this.openMenu(e, slot);
+        if (this.mounted.has(slot)) this.openUnitMenu(e, slot);
       });
 
       bay.appendChild(slotEl);
@@ -78,12 +90,17 @@ export class RackFrame {
         current.unit.el.remove();
         this.mounted.delete(slot);
         this.slotEls[slot].classList.add("empty");
+        this.slotEls[slot].style.removeProperty("height");
       }
 
       if (wanted !== "") {
-        // Registry currently ships Gain only; a unit factory keyed on module
-        // id slots in here as M5/M6 add faceplates.
-        const unit = new GainUnit(this.store, slot);
+        const UnitClass = UNIT_FACTORY[wanted];
+        if (!UnitClass) continue;
+
+        const units = this.store.moduleInfo(wanted)?.units ?? 1;
+        const unit = new UnitClass(this.store, slot);
+
+        this.slotEls[slot].style.height = `calc(var(--u) * ${units})`;
         this.slotEls[slot].appendChild(unit.el);
         this.slotEls[slot].classList.remove("empty");
         this.mounted.set(slot, { unit, moduleId: wanted });
@@ -91,16 +108,15 @@ export class RackFrame {
     }
   }
 
-  private openMenu(e: MouseEvent, slot: number): void {
-    this.closeMenu();
+  // --- menus --------------------------------------------------------------------
 
-    const bypassId = slotParamID(slot, "bypass");
-    const bypassed = this.store.param(bypassId).value01 >= 0.5;
+  private buildMenu(x: number, y: number, items: [string, () => void][]): void {
+    this.closeMenu();
 
     const menu = document.createElement("div");
     menu.className = "context-menu";
 
-    const addItem = (label: string, action: () => void) => {
+    for (const [label, action] of items) {
       const item = document.createElement("button");
       item.className = "context-item";
       item.textContent = label;
@@ -109,17 +125,33 @@ export class RackFrame {
         this.closeMenu();
       });
       menu.appendChild(item);
-    };
+    }
 
-    addItem(bypassed ? "Enable" : "Bypass", () =>
-      this.store.setParam(bypassId, bypassed ? 0 : 1),
-    );
-    addItem("Remove", () => this.store.unmount(slot));
-
-    menu.style.left = `${e.clientX}px`;
-    menu.style.top = `${e.clientY}px`;
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
     document.body.appendChild(menu);
     this.menu = menu;
+  }
+
+  private openModulePicker(e: MouseEvent, slot: number): void {
+    const items: [string, () => void][] = this.store
+      .availableModules()
+      .map((m) => [
+        `${m.name}  ·  ${m.category} · ${m.units}U`,
+        () => this.store.mount(slot, m.id),
+      ]);
+
+    if (items.length > 0) this.buildMenu(e.clientX, e.clientY, items);
+  }
+
+  private openUnitMenu(e: MouseEvent, slot: number): void {
+    const bypassId = slotParamID(slot, "bypass");
+    const bypassed = this.store.param(bypassId).value01 >= 0.5;
+
+    this.buildMenu(e.clientX, e.clientY, [
+      [bypassed ? "Enable" : "Bypass", () => this.store.setParam(bypassId, bypassed ? 0 : 1)],
+      ["Remove", () => this.store.unmount(slot)],
+    ]);
   }
 
   private closeMenu(): void {

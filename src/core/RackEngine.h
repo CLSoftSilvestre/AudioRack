@@ -60,7 +60,7 @@ public:
 
     // --- audio thread ---------------------------------------------------------
 
-    void process (juce::dsp::AudioBlock<float>& block, const TransportInfo& transport) noexcept;
+    void process (juce::dsp::AudioBlock<float>& block, const ProcessContext& context) noexcept;
 
     /// Sum of mounted modules' latencies, updated on structural change.
     int latencySamples() const noexcept { return totalLatency.load (std::memory_order_relaxed); }

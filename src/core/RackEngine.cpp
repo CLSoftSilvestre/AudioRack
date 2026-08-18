@@ -95,7 +95,7 @@ void RackEngine::collectGarbage()
         delete dead;
 }
 
-void RackEngine::process (juce::dsp::AudioBlock<float>& block, const TransportInfo& transport) noexcept
+void RackEngine::process (juce::dsp::AudioBlock<float>& block, const ProcessContext& context) noexcept
 {
     RackCommand cmd;
     while (commands.pop (cmd))
@@ -130,7 +130,7 @@ void RackEngine::process (juce::dsp::AudioBlock<float>& block, const TransportIn
             for (int ch = 0; ch < mixChannels; ++ch)
                 dryBuffer.copyFrom (ch, 0, block.getChannelPointer (static_cast<size_t> (ch)), numSamples);
 
-        module->process (block, transport);
+        module->process (block, context);
 
         {
             SlotMeterFrame meterFrame { slotIndex, {} };
