@@ -60,7 +60,9 @@
       "Bash(lsof -ti:4173,4174)",
       "Bash(xargs kill)",
       "Bash(ctest --test-dir /Users/celsosilvestre/Documents/AudioRack/build/macos)",
-      "Bash(git commit -q -m 'M5: core dynamics — compressor, limiter, gate with measured DSP tests *)"
+      "Bash(git commit -q -m 'M5: core dynamics — compressor, limiter, gate with measured DSP tests *)",
+      "Bash(/Users/celsosilvestre/Documents/AudioRack/build/macos/tests/audiorack_tests \"[eq],[delay],[reverb],[sat]\")",
+      "Bash(git commit -q -m 'M6: time & tone — parametric EQ, delay, reverb, saturator *)"
     ]
   }
 }

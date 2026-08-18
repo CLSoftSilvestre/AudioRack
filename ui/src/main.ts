@@ -3,6 +3,7 @@ import "./styles.css";
 import { createBridge } from "./bridge/juce";
 import { Store } from "./store";
 import { RackFrame } from "./rack/RackFrame";
+import { pumpTicks } from "./animator";
 
 const app = document.getElementById("app")!;
 app.className = "studio";
@@ -44,8 +45,7 @@ store.start();
 // style/layout flush — and reports per-frame main-thread cost. Compositing
 // is excluded (meters are transform/class-only, handled off-main-thread).
 if (window.location.search.includes("bench")) {
-  window.setTimeout(async () => {
-    const { pumpTicks } = await import("./animator");
+  window.setTimeout(() => {
     const pump = (window as unknown as Record<string, unknown>).__arPump as
       | (() => void)
       | undefined;

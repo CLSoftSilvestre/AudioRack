@@ -60,7 +60,11 @@ set(AUDIORACK_DSP_SOURCES
     ${CMAKE_SOURCE_DIR}/src/dsp/gain/GainModule.cpp
     ${CMAKE_SOURCE_DIR}/src/dsp/compressor/CompressorModule.cpp
     ${CMAKE_SOURCE_DIR}/src/dsp/limiter/LimiterModule.cpp
-    ${CMAKE_SOURCE_DIR}/src/dsp/gate/GateModule.cpp)
+    ${CMAKE_SOURCE_DIR}/src/dsp/gate/GateModule.cpp
+    ${CMAKE_SOURCE_DIR}/src/dsp/eq/EqModule.cpp
+    ${CMAKE_SOURCE_DIR}/src/dsp/delay/DelayModule.cpp
+    ${CMAKE_SOURCE_DIR}/src/dsp/reverb/ReverbModule.cpp
+    ${CMAKE_SOURCE_DIR}/src/dsp/saturator/SaturatorModule.cpp)
 
 if(AUDIORACK_BUILD_PLUGIN)
     add_subdirectory(src)

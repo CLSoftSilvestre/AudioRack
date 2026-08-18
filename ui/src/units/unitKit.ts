@@ -4,6 +4,7 @@
 
 import { Knob, type KnobOptions } from "../widgets/Knob";
 import { Switch } from "../widgets/Switch";
+import { Selector } from "../widgets/Selector";
 import { screw } from "../widgets/Screw";
 import { slotParamID } from "../bridge/protocol";
 import type { Store } from "../store";
@@ -25,6 +26,9 @@ export function paramKnob(
     onGestureStart: () => store.beginGesture(paramId),
     onGestureEnd: () => store.endGesture(paramId),
   });
+  // Show the default until the host's real value arrives, so knobs never sit
+  // at the minimum during the ar_rack -> ar_params gap.
+  if (opts.defaultValue01 !== undefined) knob.setValue(opts.defaultValue01);
   const unsub = store.onParam(paramId, (p) => knob.setValue(p.value01, p.text));
   return { el: knob.el, unsub };
 }
@@ -37,6 +41,21 @@ export function paramSwitch(store: Store, paramId: string, label: string): Bound
   });
   const unsub = store.onParam(paramId, (p) => sw.setOn(p.value01 >= 0.5));
   return { el: sw.el, unsub };
+}
+
+/** Stepped selector bound to an N-choice parameter (shows host text). */
+export function paramSelector(store: Store, paramId: string, label: string, count: number): Bound {
+  const sel = new Selector({
+    label,
+    count,
+    onSelect: (v) => {
+      store.beginGesture(paramId);
+      store.setParam(paramId, v);
+      store.endGesture(paramId);
+    },
+  });
+  const unsub = store.onParam(paramId, (p) => sel.setValue(p.value01, p.text));
+  return { el: sel.el, unsub };
 }
 
 /** Standard bypass bat switch + power LED; lit = processing. */

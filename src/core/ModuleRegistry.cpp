@@ -4,6 +4,10 @@
 #include "../dsp/compressor/CompressorModule.h"
 #include "../dsp/limiter/LimiterModule.h"
 #include "../dsp/gate/GateModule.h"
+#include "../dsp/eq/EqModule.h"
+#include "../dsp/delay/DelayModule.h"
+#include "../dsp/reverb/ReverbModule.h"
+#include "../dsp/saturator/SaturatorModule.h"
 
 namespace audiorack
 {
@@ -44,9 +48,12 @@ void registerBuiltinModules()
 
     registry.add (GainModule::typeInfo());
     registry.add (CompressorModule::typeInfo());
-    registry.add (LimiterModule::typeInfo());
     registry.add (GateModule::typeInfo());
-    // One line per module lands here as milestone M6 adds them.
+    registry.add (EqModule::typeInfo());
+    registry.add (SaturatorModule::typeInfo());
+    registry.add (DelayModule::typeInfo());
+    registry.add (ReverbModule::typeInfo());
+    registry.add (LimiterModule::typeInfo());
 }
 
 } // namespace audiorack

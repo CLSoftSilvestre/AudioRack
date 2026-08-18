@@ -1,5 +1,43 @@
 # Progress
 
+## 2026-08-18 (later still) — M6 time & tone
+
+### Done
+
+- **Parametric EQ (EQ-6, 2U)** — 6 RBJ biquad bands (bell/shelf/HP/LP),
+  per-band on/solo, output trim, coefficients recomputed only on change. UI
+  draws the live magnitude curve from the same RBJ formulas with draggable
+  band handles.
+- **Delay (DL-2, 2U)** — digital + tape modes, 4-point Lagrange fractional
+  delay (glitch-free under modulation), host-sync note divisions, ping-pong,
+  feedback tone filter, wow/flutter, stereo offset, tanh feedback clip.
+- **Reverb (RV-8, 3U)** — 8-line FDN with lossless 8×8 Hadamard mixing,
+  per-line damping, slow line modulation, predelay, width, freeze.
+- **Saturator (SAT-1, 1U)** — tube/tape/transistor closed-form curves, 4×
+  oversampled signal path, DC blocker, drive compensation, parallel mix.
+- **Shared DSP**: Biquad gained peak/shelf coefficient sets, `FractionalDelay`
+  (Lagrange), reused across EQ/delay/reverb.
+- **UI**: EqCurve canvas widget, Selector (choice) widget, four themed
+  faceplates (graphite EQ, bronze saturator, teal delay, indigo reverb),
+  browser-preview parameter schema so `npm run dev` shows all modules.
+
+### Measured (tests/TimeToneTests.cpp — 11 new tests, 37 total green)
+
+- EQ +12 dB bell reads +12 ±1.5 at centre, flat two decades away; HP >10 dB
+  down below cutoff; solo isolates bands.
+- Delay impulse at exactly the set time; 1/4 @ 120 bpm = 24000 samples;
+  feedback decays.
+- Reverb tail present and decaying; freeze sustains and stays finite.
+- Saturator generates odd harmonics; auto-gain holds level within 8 dB over
+  21 dB of drive; reports oversampler latency.
+- pluginval strictness 10 (incl. GUI tests) passes on the full 8-module
+  layout; zero warnings.
+
+### Next (M7 — rack UX)
+
+Drag & drop from a browser panel, drag-to-reorder, A/B compare, per-slot
+wet/dry already exists, MIDI learn, resizing polish.
+
 ## 2026-08-18 (later) — M5 core dynamics
 
 ### Done

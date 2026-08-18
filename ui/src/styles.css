@@ -365,6 +365,51 @@ body {
   fill: rgba(226, 224, 216, 0.65);
 }
 
+/* Graphite (EQ). */
+.unit-eq .unit-face {
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px),
+    linear-gradient(180deg, #3a3d42 0%, #303338 35%, #292c30 70%, #1f2225 100%);
+}
+.unit-eq .unit-ear { background: linear-gradient(90deg, #242629 0%, #34373c 40%, #242629 100%); }
+.unit-eq .unit-ear.right { background: linear-gradient(270deg, #242629 0%, #34373c 40%, #242629 100%); }
+
+/* Bronze (saturator) — warm light face. */
+.unit-sat .unit-face {
+  background:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.05"/></feComponentTransfer></filter><rect width="120" height="120" filter="url(%23n)"/></svg>'),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0.03) 1px 2px),
+    linear-gradient(180deg, #d9c3a0 0%, #cbb28a 35%, #c0a679 70%, #a98f63 100%);
+  color: #3a2f1e;
+}
+.unit-sat .unit-ear { background: linear-gradient(90deg, #a68a5f 0%, #c4a878 40%, #a68a5f 100%); }
+.unit-sat .unit-ear.right { background: linear-gradient(270deg, #a68a5f 0%, #c4a878 40%, #a68a5f 100%); }
+.unit-sat .unit-logo, .unit-sat .unit-model { color: #3a2f1e; }
+.unit-sat .unit-series { color: rgba(58, 47, 30, 0.6); }
+.unit-sat .unit-brand { border-right-color: rgba(58, 47, 30, 0.25); }
+.unit-sat .knob-label, .unit-sat .selector-label { color: rgba(58, 47, 30, 0.85); }
+.unit-sat .tick-major { stroke: rgba(58, 47, 30, 0.8); }
+.unit-sat .tick-minor { stroke: rgba(58, 47, 30, 0.4); }
+.unit-sat .tick-text { fill: rgba(58, 47, 30, 0.7); }
+
+/* Teal (delay). */
+.unit-delay .unit-face {
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px),
+    linear-gradient(180deg, #234848 0%, #1d3d3e 35%, #193435 70%, #132728 100%);
+}
+.unit-delay .unit-ear { background: linear-gradient(90deg, #16302f 0%, #22423f 40%, #16302f 100%); }
+.unit-delay .unit-ear.right { background: linear-gradient(270deg, #16302f 0%, #22423f 40%, #16302f 100%); }
+
+/* Indigo (reverb). */
+.unit-reverb .unit-face {
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px),
+    linear-gradient(180deg, #2e2f4a 0%, #27273f 35%, #212135 70%, #191927 100%);
+}
+.unit-reverb .unit-ear { background: linear-gradient(90deg, #1c1c30 0%, #2a2a44 40%, #1c1c30 100%); }
+.unit-reverb .unit-ear.right { background: linear-gradient(270deg, #1c1c30 0%, #2a2a44 40%, #1c1c30 100%); }
+
 /* ======================== DYNAMICS UNIT LAYOUTS ======================== */
 
 .section-title {
@@ -451,6 +496,131 @@ body {
   padding: 0 8px;
   border-left: 1px solid rgba(226, 224, 216, 0.14);
 }
+
+/* ============================ M6 UNIT LAYOUTS ============================ */
+
+/* --- Selector widget --- */
+.selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  outline: none;
+}
+
+.selector-window {
+  min-width: 58px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #0c1512 0%, #12201a 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.9),
+    0 1px 0 rgba(255, 255, 255, 0.25);
+  text-align: center;
+}
+
+.selector-text {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #7dffb0;
+  text-shadow: 0 0 5px rgba(80, 255, 150, 0.6);
+  white-space: nowrap;
+}
+
+.selector-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(53, 50, 44, 0.85);
+}
+
+.selector:focus-visible .selector-window {
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.9),
+    0 0 0 2px rgba(120, 170, 255, 0.7);
+}
+
+.selector-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* --- EQ layout --- */
+.eq-face {
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 14px 4px;
+}
+
+.eq-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.eq-curve {
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 2px 6px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.eq-strips {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.eq-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 2px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.12);
+  border-top: 2px solid var(--band-color, #888);
+}
+
+.eq-rail {
+  position: absolute;
+  right: 58px;
+  top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.unit-eq .unit-bypass-well {
+  position: absolute;
+  right: 8px;
+  top: 12px;
+  border-left: none;
+}
+
+/* --- Saturator layout --- */
+.sat-type { padding: 0 8px; }
+.sat-knobs { display: flex; align-items: center; gap: 8px; padding: 0 10px;
+  border-left: 1px solid rgba(58, 47, 30, 0.2); border-right: 1px solid rgba(58, 47, 30, 0.2); }
+.sat-meter { flex: 1; }
+
+/* --- Delay layout --- */
+.delay-time { gap: 10px; padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
+.delay-knobs { gap: 6px; padding: 0 10px; }
+.delay-switches { flex-direction: column; gap: 6px; padding: 0 8px;
+  border-left: 1px solid rgba(226, 224, 216, 0.14); border-right: 1px solid rgba(226, 224, 216, 0.14); }
+.delay-meter { flex: 1; }
+
+/* --- Reverb layout --- */
+.reverb-knobs { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 10px;
+  align-content: center; padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
+.reverb-center { flex-direction: column; gap: 8px; padding: 0 12px; }
+.reverb-meter { flex: 1; }
 
 /* ============================== GR LADDER ============================== */
 

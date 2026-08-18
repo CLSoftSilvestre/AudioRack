@@ -11,6 +11,10 @@ import { GainUnit } from "../units/GainUnit";
 import { CompressorUnit } from "../units/CompressorUnit";
 import { LimiterUnit } from "../units/LimiterUnit";
 import { GateUnit } from "../units/GateUnit";
+import { EqUnit } from "../units/EqUnit";
+import { SaturatorUnit } from "../units/SaturatorUnit";
+import { DelayUnit } from "../units/DelayUnit";
+import { ReverbUnit } from "../units/ReverbUnit";
 import { MAX_SLOTS, slotParamID } from "../bridge/protocol";
 import type { Store } from "../store";
 
@@ -24,6 +28,10 @@ const UNIT_FACTORY: Record<string, new (store: Store, slot: number) => UnitInsta
   comp: CompressorUnit,
   lim: LimiterUnit,
   gate: GateUnit,
+  eq: EqUnit,
+  sat: SaturatorUnit,
+  delay: DelayUnit,
+  reverb: ReverbUnit,
 };
 
 interface Mounted {

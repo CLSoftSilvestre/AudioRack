@@ -18,7 +18,8 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M3 — WebView UI shell | ✅ |
 | M4 — Widget library | ✅ |
 | M5 — Core dynamics (compressor, limiter, gate) | ✅ |
-| M6+ — EQ/time-domain modules, rack UX, shipping | ⏳ |
+| M6 — Time & tone (EQ, delay, reverb, saturator) | ✅ |
+| M7+ — Rack UX (drag/reorder/A-B/MIDI learn), shipping | ⏳ |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md).
 

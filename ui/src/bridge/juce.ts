@@ -5,6 +5,7 @@
 
 import type { MetersMessage, ParamsMessage, RackMessage, UiEvent } from "./protocol";
 import { MAX_SLOTS } from "./protocol";
+import { PREVIEW_SCHEMA } from "./previewSchema";
 
 interface JuceBackend {
   addEventListener(eventId: string, fn: (payload: unknown) => void): unknown;
@@ -57,7 +58,7 @@ class MockBridge implements Bridge {
   // "?full" mounts every slot (frame-budget benchmark); "?demo" mounts one
   // of each module type (visual review).
   private slots: string[] = window.location.search.includes("demo")
-    ? ["gain", "comp", "lim", "gate", ...Array.from({ length: MAX_SLOTS - 4 }, () => "")]
+    ? ["comp", "eq", "sat", "delay", "reverb", "lim", ...Array.from({ length: MAX_SLOTS - 6 }, () => "")]
     : Array.from({ length: MAX_SLOTS }, (_, i) =>
         window.location.search.includes("full") || i === 0 ? "gain" : "",
       );
@@ -87,6 +88,7 @@ class MockBridge implements Bridge {
       case "mount":
         this.slots[event.slot] = event.moduleId;
         this.emitRack();
+        queueMicrotask(() => this.emitAllParams());
         break;
       case "unmount":
         this.slots[event.slot] = "";
@@ -115,24 +117,29 @@ class MockBridge implements Bridge {
     this.meterListeners.push(fn);
   }
 
+  private schemaFor(id: string): { module: string; suffix: string } | null {
+    const parts = id.split(".");
+    if (parts.length === 3) return { module: parts[1], suffix: parts[2] };
+    return null; // slotN.bypass / slotN.mix
+  }
+
   private value01(id: string): number {
     const v = this.params.get(id);
     if (v !== undefined) return v;
-    // Defaults mirror the native layout: gain centred, mix full, bypass off.
-    if (id.endsWith(".mix")) return 1;
     if (id.endsWith(".bypass")) return 0;
-    return 0.5;
+    if (id.endsWith(".mix")) return 1; // per-slot wet/dry
+    const s = this.schemaFor(id);
+    const def = s && PREVIEW_SCHEMA[s.module]?.find((p) => p.suffix === s.suffix)?.default01;
+    return def ?? 0.5;
   }
 
   private format(id: string): string {
     const v = this.value01(id);
     if (id.endsWith(".bypass")) return v >= 0.5 ? "On" : "Off";
     if (id.endsWith(".mix")) return `${Math.round(v * 100)} %`;
-    if (id.endsWith(".gaindb")) {
-      const db = gainDbFrom01(v);
-      return db <= -60 ? "-inf dB" : `${db.toFixed(1)} dB`;
-    }
-    return v.toFixed(2);
+    const s = this.schemaFor(id);
+    const fmt = s && PREVIEW_SCHEMA[s.module]?.find((p) => p.suffix === s.suffix)?.format;
+    return fmt ? fmt(v) : v.toFixed(2);
   }
 
   private emitRack(): void {
@@ -141,8 +148,12 @@ class MockBridge implements Bridge {
       modules: [
         { id: "gain", name: "Gain", category: "Utility", units: 1 },
         { id: "comp", name: "Compressor", category: "Dynamics", units: 2 },
-        { id: "lim", name: "Limiter", category: "Dynamics", units: 1 },
         { id: "gate", name: "Gate", category: "Dynamics", units: 1 },
+        { id: "eq", name: "Parametric EQ", category: "EQ", units: 2 },
+        { id: "sat", name: "Saturator", category: "Tone", units: 1 },
+        { id: "delay", name: "Delay", category: "Time", units: 2 },
+        { id: "reverb", name: "Reverb", category: "Time", units: 3 },
+        { id: "lim", name: "Limiter", category: "Dynamics", units: 1 },
       ],
     };
     this.rackListeners.forEach((fn) => fn(msg));
@@ -151,7 +162,14 @@ class MockBridge implements Bridge {
   private emitAllParams(): void {
     const p: ParamsMessage["p"] = [];
     for (let slot = 0; slot < MAX_SLOTS; slot++) {
-      for (const id of [`slot${slot}.bypass`, `slot${slot}.mix`, `slot${slot}.gain.gaindb`]) {
+      p.push([`slot${slot}.bypass`, this.value01(`slot${slot}.bypass`), this.format(`slot${slot}.bypass`)]);
+      p.push([`slot${slot}.mix`, this.value01(`slot${slot}.mix`), this.format(`slot${slot}.mix`)]);
+
+      const moduleId = this.slots[slot];
+      const schema = PREVIEW_SCHEMA[moduleId];
+      if (!schema) continue;
+      for (const param of schema) {
+        const id = `slot${slot}.${moduleId}.${param.suffix}`;
         p.push([id, this.value01(id), this.format(id)]);
       }
     }

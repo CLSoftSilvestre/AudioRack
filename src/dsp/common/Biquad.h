@@ -41,6 +41,59 @@ public:
         a2 = (1.0 - alpha) / a0;
     }
 
+    /// Bell/peaking EQ. A = 10^(dB/40) per the cookbook.
+    void setPeak (double fc, double q, double gainDb, double sampleRate) noexcept
+    {
+        const double A     = std::pow (10.0, gainDb / 40.0);
+        const double w0    = 2.0 * pi * clampFreq (fc, sampleRate) / sampleRate;
+        const double cosw0 = std::cos (w0);
+        const double alpha = std::sin (w0) / (2.0 * q);
+        const double a0    = 1.0 + alpha / A;
+
+        b0 = (1.0 + alpha * A) / a0;
+        b1 = (-2.0 * cosw0) / a0;
+        b2 = (1.0 - alpha * A) / a0;
+        a1 = (-2.0 * cosw0) / a0;
+        a2 = (1.0 - alpha / A) / a0;
+    }
+
+    void setLowShelf (double fc, double q, double gainDb, double sampleRate) noexcept
+    {
+        const double A     = std::pow (10.0, gainDb / 40.0);
+        const double w0    = 2.0 * pi * clampFreq (fc, sampleRate) / sampleRate;
+        const double cosw0 = std::cos (w0);
+        const double alpha = std::sin (w0) / (2.0 * q);
+        const double sqA2a = 2.0 * std::sqrt (A) * alpha;
+        const double a0    = (A + 1.0) + (A - 1.0) * cosw0 + sqA2a;
+
+        b0 = (A * ((A + 1.0) - (A - 1.0) * cosw0 + sqA2a)) / a0;
+        b1 = (2.0 * A * ((A - 1.0) - (A + 1.0) * cosw0)) / a0;
+        b2 = (A * ((A + 1.0) - (A - 1.0) * cosw0 - sqA2a)) / a0;
+        a1 = (-2.0 * ((A - 1.0) + (A + 1.0) * cosw0)) / a0;
+        a2 = ((A + 1.0) + (A - 1.0) * cosw0 - sqA2a) / a0;
+    }
+
+    void setHighShelf (double fc, double q, double gainDb, double sampleRate) noexcept
+    {
+        const double A     = std::pow (10.0, gainDb / 40.0);
+        const double w0    = 2.0 * pi * clampFreq (fc, sampleRate) / sampleRate;
+        const double cosw0 = std::cos (w0);
+        const double alpha = std::sin (w0) / (2.0 * q);
+        const double sqA2a = 2.0 * std::sqrt (A) * alpha;
+        const double a0    = (A + 1.0) - (A - 1.0) * cosw0 + sqA2a;
+
+        b0 = (A * ((A + 1.0) + (A - 1.0) * cosw0 + sqA2a)) / a0;
+        b1 = (-2.0 * A * ((A - 1.0) + (A + 1.0) * cosw0)) / a0;
+        b2 = (A * ((A + 1.0) + (A - 1.0) * cosw0 - sqA2a)) / a0;
+        a1 = (2.0 * ((A - 1.0) - (A + 1.0) * cosw0)) / a0;
+        a2 = ((A + 1.0) - (A - 1.0) * cosw0 - sqA2a) / a0;
+    }
+
+    void setIdentity() noexcept
+    {
+        b0 = 1.0; b1 = b2 = a1 = a2 = 0.0;
+    }
+
     void reset() noexcept { z1 = z2 = 0.0; }
 
     float process (float x) noexcept
