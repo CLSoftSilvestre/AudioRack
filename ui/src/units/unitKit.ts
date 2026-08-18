@@ -6,12 +6,53 @@ import { Knob, type KnobOptions } from "../widgets/Knob";
 import { Switch } from "../widgets/Switch";
 import { Selector } from "../widgets/Selector";
 import { screw } from "../widgets/Screw";
+import { openContextMenu, type MenuItem } from "../widgets/contextMenu";
 import { slotParamID } from "../bridge/protocol";
 import type { Store } from "../store";
 
 export interface Bound {
   el: HTMLElement;
   unsub: () => void;
+}
+
+/** Right-click MIDI learn for a control: arm/cancel/forget, plus an armed ring
+ *  and a "CCn" badge. Used for knobs and switches — selectors already use
+ *  right-click to step their value, so they are intentionally excluded. */
+export function attachMidiLearn(store: Store, paramId: string, el: HTMLElement): () => void {
+  el.classList.add("midi-target");
+
+  const badge = document.createElement("span");
+  badge.className = "midi-badge";
+  el.appendChild(badge);
+
+  const onContext = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const cc = store.midiCcFor(paramId);
+    const items: MenuItem[] = store.isMidiArmed(paramId)
+      ? [{ label: "Cancel MIDI Learn", action: () => store.clearMidiLearn() }]
+      : [{ label: "MIDI Learn", action: () => store.armMidiLearn(paramId) }];
+
+    if (cc !== undefined) items.push({ label: `Forget MIDI CC ${cc}`, action: () => store.forgetMidi(paramId) });
+
+    openContextMenu(e.clientX, e.clientY, items);
+  };
+  el.addEventListener("contextmenu", onContext);
+
+  const unsub = store.onMidi(() => {
+    const cc = store.midiCcFor(paramId);
+    const armed = store.isMidiArmed(paramId);
+    el.classList.toggle("midi-armed", armed);
+    el.classList.toggle("midi-mapped", cc !== undefined && !armed);
+    badge.textContent = armed ? "LEARN" : cc !== undefined ? `CC${cc}` : "";
+  });
+
+  return () => {
+    el.removeEventListener("contextmenu", onContext);
+    unsub();
+    badge.remove();
+  };
 }
 
 /** Knob bound to a host parameter (normalized value + host display text). */
@@ -29,8 +70,15 @@ export function paramKnob(
   // Show the default until the host's real value arrives, so knobs never sit
   // at the minimum during the ar_rack -> ar_params gap.
   if (opts.defaultValue01 !== undefined) knob.setValue(opts.defaultValue01);
-  const unsub = store.onParam(paramId, (p) => knob.setValue(p.value01, p.text));
-  return { el: knob.el, unsub };
+  const unsubParam = store.onParam(paramId, (p) => knob.setValue(p.value01, p.text));
+  const unsubMidi = attachMidiLearn(store, paramId, knob.el);
+  return {
+    el: knob.el,
+    unsub: () => {
+      unsubParam();
+      unsubMidi();
+    },
+  };
 }
 
 /** Two-position toggle bound to a 2-choice parameter (0 = off-label). */
@@ -39,8 +87,15 @@ export function paramSwitch(store: Store, paramId: string, label: string): Bound
     label,
     onChange: (on) => store.setParam(paramId, on ? 1 : 0),
   });
-  const unsub = store.onParam(paramId, (p) => sw.setOn(p.value01 >= 0.5));
-  return { el: sw.el, unsub };
+  const unsubParam = store.onParam(paramId, (p) => sw.setOn(p.value01 >= 0.5));
+  const unsubMidi = attachMidiLearn(store, paramId, sw.el);
+  return {
+    el: sw.el,
+    unsub: () => {
+      unsubParam();
+      unsubMidi();
+    },
+  };
 }
 
 /** Stepped selector bound to an N-choice parameter (shows host text). */

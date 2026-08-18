@@ -8,6 +8,7 @@ import type { MeterFrameData } from "./types";
 import { MAX_SLOTS, type ModuleInfo, type UiEvent } from "./bridge/protocol";
 
 type AbListener = (bank: number) => void;
+type MidiListener = () => void;
 
 export interface ParamState {
   value01: number;
@@ -30,6 +31,10 @@ export class Store {
 
   private bank = 0;
   private abListeners = new Set<AbListener>();
+
+  private midiArmed: string | null = null;
+  private midiCc = new Map<string, number>();
+  private midiListeners = new Set<MidiListener>();
 
   constructor(private bridge: Bridge) {
     bridge.onParams((msg) => {
@@ -57,6 +62,12 @@ export class Store {
     bridge.onAb((msg) => {
       this.bank = msg.bank;
       this.abListeners.forEach((fn) => fn(this.bank));
+    });
+
+    bridge.onMidi((msg) => {
+      this.midiArmed = msg.armed;
+      this.midiCc = new Map(msg.map);
+      this.midiListeners.forEach((fn) => fn());
     });
   }
 
@@ -91,6 +102,15 @@ export class Store {
     return this.slots.indexOf("");
   }
 
+  /** CC number mapped to a parameter, or undefined if unmapped. */
+  midiCcFor(id: string): number | undefined {
+    return this.midiCc.get(id);
+  }
+
+  isMidiArmed(id: string): boolean {
+    return this.midiArmed === id;
+  }
+
   // --- subscriptions -------------------------------------------------------------
 
   onParam(id: string, fn: ParamListener): () => void {
@@ -118,6 +138,13 @@ export class Store {
     this.abListeners.add(fn);
     fn(this.bank);
     return () => this.abListeners.delete(fn);
+  }
+
+  /** Fires whenever the armed parameter or the CC map changes. */
+  onMidi(fn: MidiListener): () => void {
+    this.midiListeners.add(fn);
+    fn();
+    return () => this.midiListeners.delete(fn);
   }
 
   // --- writes (forwarded to native; echo comes back through onParams) ---------------
@@ -148,6 +175,15 @@ export class Store {
   }
   copyBank(): void {
     this.send({ type: "abCopy" });
+  }
+  armMidiLearn(id: string): void {
+    this.send({ type: "midiLearn", id });
+  }
+  clearMidiLearn(): void {
+    this.send({ type: "midiClearLearn" });
+  }
+  forgetMidi(id: string): void {
+    this.send({ type: "midiForget", id });
   }
 
   private send(event: UiEvent): void {

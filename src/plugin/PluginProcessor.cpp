@@ -76,6 +76,27 @@ AudioRackProcessor::AudioRackProcessor()
     captureBank (0);
     captureBank (1);
 
+    // Build the MIDI-learn parameter index space and clear the CC map.
+    for (auto* parameter : getParameters())
+        if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*> (parameter))
+        {
+            paramIdToIndex[ranged->paramID] = static_cast<int> (automatableParams.size());
+            automatableParams.push_back (ranged);
+        }
+
+    for (auto& slot : ccToParam)
+        slot.store (-1, std::memory_order_relaxed);
+
+    const auto numParams = automatableParams.size();
+    midiValue = std::make_unique<std::atomic<float>[]> (numParams);
+    midiDirty = std::make_unique<std::atomic<bool>[]> (numParams);
+
+    for (size_t i = 0; i < numParams; ++i)
+    {
+        midiValue[i].store (0.0f,  std::memory_order_relaxed);
+        midiDirty[i].store (false, std::memory_order_relaxed);
+    }
+
     startTimerHz (30);
 }
 
@@ -251,6 +272,139 @@ void AudioRackProcessor::copyBankToOther()
     abStateChanged.sendChangeMessage();
 }
 
+// --- MIDI learn ---------------------------------------------------------------
+
+int AudioRackProcessor::paramIndexFor (const juce::String& paramID) const
+{
+    const auto it = paramIdToIndex.find (paramID);
+    return it != paramIdToIndex.end() ? it->second : -1;
+}
+
+void AudioRackProcessor::handleControlChange (int cc, int value) noexcept
+{
+    if (! juce::isPositiveAndBelow (cc, 128))
+        return;
+
+    // Armed for learn: hand the CC to the message thread and disarm.
+    if (learnArmed.load (std::memory_order_acquire) >= 0)
+    {
+        pendingLearnedCc.store (cc, std::memory_order_release);
+        learnArmed.store (-1, std::memory_order_release);
+        return;
+    }
+
+    const int idx = ccToParam[static_cast<size_t> (cc)].load (std::memory_order_acquire);
+
+    if (idx >= 0)
+    {
+        // Coalesce: keep only the newest value; the timer applies it.
+        midiValue[static_cast<size_t> (idx)].store (static_cast<float> (value) / 127.0f,
+                                                    std::memory_order_relaxed);
+        midiDirty[static_cast<size_t> (idx)].store (true, std::memory_order_release);
+    }
+}
+
+void AudioRackProcessor::bindMidiCc (int cc, int paramIndex)
+{
+    if (! juce::isPositiveAndBelow (cc, 128))
+        return;
+
+    // A parameter is driven by at most one CC: release any previous binding.
+    for (auto& slot : ccToParam)
+        if (slot.load (std::memory_order_relaxed) == paramIndex)
+            slot.store (-1, std::memory_order_release);
+
+    ccToParam[static_cast<size_t> (cc)].store (paramIndex, std::memory_order_release);
+}
+
+void AudioRackProcessor::drainMidi()
+{
+    if (const int cc = pendingLearnedCc.exchange (-1, std::memory_order_acquire); cc >= 0)
+    {
+        if (messageArmedIndex >= 0)
+        {
+            bindMidiCc (cc, messageArmedIndex);
+            messageArmedIndex = -1;
+            midiStateChanged.sendChangeMessage();
+        }
+    }
+
+    for (size_t i = 0; i < automatableParams.size(); ++i)
+        if (midiDirty[i].exchange (false, std::memory_order_acquire))
+            automatableParams[i]->setValueNotifyingHost (
+                midiValue[i].load (std::memory_order_relaxed));
+}
+
+void AudioRackProcessor::armMidiLearn (const juce::String& paramID)
+{
+    const int idx = paramIndexFor (paramID);
+
+    if (idx < 0)
+        return;
+
+    messageArmedIndex = idx;
+    learnArmed.store (idx, std::memory_order_release);
+    midiStateChanged.sendChangeMessage();
+}
+
+void AudioRackProcessor::cancelMidiLearn()
+{
+    messageArmedIndex = -1;
+    learnArmed.store (-1, std::memory_order_release);
+    midiStateChanged.sendChangeMessage();
+}
+
+void AudioRackProcessor::forgetMidiMapping (const juce::String& paramID)
+{
+    const int idx = paramIndexFor (paramID);
+
+    if (idx < 0)
+        return;
+
+    for (auto& slot : ccToParam)
+        if (slot.load (std::memory_order_relaxed) == idx)
+            slot.store (-1, std::memory_order_release);
+
+    midiStateChanged.sendChangeMessage();
+}
+
+juce::String AudioRackProcessor::midiArmedParamId() const
+{
+    if (messageArmedIndex >= 0 && messageArmedIndex < static_cast<int> (automatableParams.size()))
+        return automatableParams[static_cast<size_t> (messageArmedIndex)]->paramID;
+
+    return {};
+}
+
+std::vector<std::pair<int, juce::String>> AudioRackProcessor::midiMappings() const
+{
+    std::vector<std::pair<int, juce::String>> out;
+
+    for (int cc = 0; cc < 128; ++cc)
+    {
+        const int idx = ccToParam[static_cast<size_t> (cc)].load (std::memory_order_relaxed);
+
+        if (idx >= 0 && idx < static_cast<int> (automatableParams.size()))
+            out.emplace_back (cc, automatableParams[static_cast<size_t> (idx)]->paramID);
+    }
+
+    return out;
+}
+
+void AudioRackProcessor::clearAllMidiMappings()
+{
+    for (auto& slot : ccToParam)
+        slot.store (-1, std::memory_order_release);
+}
+
+void AudioRackProcessor::setMidiMapping (int cc, const juce::String& paramID)
+{
+    const int idx = paramIndexFor (paramID);
+
+    if (idx >= 0)
+        bindMidiCc (cc, idx);
+}
+
 // --- Audio ----------------------------------------------------------------------
 
 void AudioRackProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
@@ -309,9 +463,15 @@ TransportInfo AudioRackProcessor::currentTransport() noexcept
     return info;
 }
 
-void AudioRackProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void AudioRackProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
+
+    // MIDI learn: raw-parse control-change messages (allocation-free, no
+    // MidiMessage construction). Status 0xB0 | channel, data1 = CC, data2 = value.
+    for (const auto metadata : midiMessages)
+        if (metadata.numBytes == 3 && (metadata.data[0] & 0xF0) == 0xB0)
+            handleControlChange (metadata.data[1], metadata.data[2]);
 
     // Silence any output channels that have no corresponding input.
     for (int ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch)
@@ -342,6 +502,7 @@ void AudioRackProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 void AudioRackProcessor::timerCallback()
 {
     engine.collectGarbage();
+    drainMidi();
 
     const auto latency = engine.latencySamples();
     if (latency != getLatencySamples())

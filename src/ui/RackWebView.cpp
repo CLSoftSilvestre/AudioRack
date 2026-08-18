@@ -53,6 +53,7 @@ RackWebView::RackWebView (AudioRackProcessor& p)
 
     processor.rackLayoutChanged.addChangeListener (this);
     processor.abStateChanged.addChangeListener (this);
+    processor.midiStateChanged.addChangeListener (this);
 
     auto options =
         juce::WebBrowserComponent::Options {}
@@ -82,6 +83,7 @@ RackWebView::~RackWebView()
     stopTimer();
     processor.rackLayoutChanged.removeChangeListener (this);
     processor.abStateChanged.removeChangeListener (this);
+    processor.midiStateChanged.removeChangeListener (this);
 
     for (auto* ranged : parameters)
         processor.parameterState().removeParameterListener (ranged->paramID, this);
@@ -123,6 +125,26 @@ void RackWebView::sendAbState()
     auto* payload = new juce::DynamicObject();
     payload->setProperty ("bank", processor.activeBank());
     web->emitEventIfBrowserIsVisible ("ar_ab", juce::var (payload));
+}
+
+void RackWebView::sendMidiState()
+{
+    auto* payload = new juce::DynamicObject();
+
+    const auto armed = processor.midiArmedParamId();
+    payload->setProperty ("armed", armed.isEmpty() ? juce::var() : juce::var (armed));
+
+    juce::Array<juce::var> map;
+    for (const auto& [cc, id] : processor.midiMappings())
+    {
+        juce::Array<juce::var> entry;
+        entry.add (id);
+        entry.add (cc);
+        map.add (juce::var (entry));
+    }
+    payload->setProperty ("map", map);
+
+    web->emitEventIfBrowserIsVisible ("ar_midi", juce::var (payload));
 }
 
 void RackWebView::sendAllParameters()
@@ -235,6 +257,7 @@ void RackWebView::handleUiEvent (const juce::var& payload)
     {
         sendRackLayout();
         sendAbState();
+        sendMidiState();
         sendAllParameters();
         return;
     }
@@ -297,15 +320,35 @@ void RackWebView::handleUiEvent (const juce::var& payload)
         processor.copyBankToOther();
         return;
     }
+
+    if (type == "midiLearn")
+    {
+        processor.armMidiLearn (payload.getProperty ("id", juce::var()).toString());
+        return;
+    }
+
+    if (type == "midiClearLearn")
+    {
+        processor.cancelMidiLearn();
+        return;
+    }
+
+    if (type == "midiForget")
+    {
+        processor.forgetMidiMapping (payload.getProperty ("id", juce::var()).toString());
+        return;
+    }
 }
 
 // --- listeners --------------------------------------------------------------------
 
 void RackWebView::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
-    // Both broadcasters fire on the message thread (ChangeBroadcaster is async).
+    // All three broadcasters fire on the message thread (ChangeBroadcaster async).
     if (source == &processor.abStateChanged)
         sendAbState();
+    else if (source == &processor.midiStateChanged)
+        sendMidiState();
     else
         sendRackLayout();
 }

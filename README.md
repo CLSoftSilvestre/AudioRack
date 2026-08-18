@@ -20,7 +20,8 @@ plugin** from the same codebase. Targets: **macOS 11+ (universal)** and
 | M5 — Core dynamics (compressor, limiter, gate) | ✅ |
 | M6 — Time & tone (EQ, delay, reverb, saturator) | ✅ |
 | M7a — Rack UX: browser, drag & drop, reorder, duplicate, A/B | ✅ |
-| M7b — MIDI learn · M8 — shipping | ⏳ |
+| M7b — MIDI learn (right-click any knob/switch) | ✅ |
+| M8 — Shipping (installers, signing, manual) | ⏳ |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md).
 

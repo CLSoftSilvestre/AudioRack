@@ -33,6 +33,14 @@ export interface AbMessage {
   bank: number;
 }
 
+/** native -> web: "ar_midi" — MIDI-learn state.
+ *  `armed` is the paramID waiting for a CC (null = nothing armed);
+ *  `map` lists every current [paramID, ccNumber] binding. */
+export interface MidiMessage {
+  armed: string | null;
+  map: [string, number][];
+}
+
 /** web -> native: everything travels on the "ar_ui" event. */
 export type UiEvent =
   | { type: "ready" }
@@ -44,7 +52,10 @@ export type UiEvent =
   | { type: "move"; from: number; to: number }
   | { type: "duplicate"; from: number; to: number }
   | { type: "abSelect"; bank: number }
-  | { type: "abCopy" };
+  | { type: "abCopy" }
+  | { type: "midiLearn"; id: string }
+  | { type: "midiClearLearn" }
+  | { type: "midiForget"; id: string };
 
 /** Parameter ID helpers — must match src/core/ParameterModel.h. */
 export const paramID = (slot: number, moduleId: string, suffix: string): string =>

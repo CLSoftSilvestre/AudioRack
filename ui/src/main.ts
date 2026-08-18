@@ -58,6 +58,21 @@ rescale();
 // Tell the backend we're alive; it answers with rack layout + all params.
 store.start();
 
+// QA hook ("?miditest"): drive the real right-click -> "MIDI Learn" path on the
+// first mappable control so the armed ring and, once the mock binds a synthetic
+// CC, the "CCn" badge can be screenshotted headlessly. Dev-only, like ?bench.
+if (window.location.search.includes("miditest")) {
+  window.setTimeout(() => {
+    const target = document.querySelector<HTMLElement>(".midi-target");
+    if (!target) return;
+    const r = target.getBoundingClientRect();
+    target.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, clientX: r.left + 4, clientY: r.top + 4 }),
+    );
+    document.querySelector<HTMLElement>(".context-item")?.click();
+  }, 600);
+}
+
 // Frame-budget benchmark ("?full&bench"): simulates 600 frames of a fully
 // populated rack — meter ingestion, every animation tick, plus a forced
 // style/layout flush — and reports per-frame main-thread cost. Compositing

@@ -1535,6 +1535,64 @@ body.dragging * {
   color: rgba(53, 50, 44, 0.85);
 }
 
+/* ============================== MIDI LEARN ============================== */
+
+.midi-target {
+  position: relative;
+}
+
+.midi-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  z-index: 6;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  color: #b9ccff;
+  background: #1a2c63;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.midi-mapped .midi-badge {
+  opacity: 1;
+}
+
+.midi-armed .midi-badge {
+  opacity: 1;
+  color: #2a1e04;
+  background: var(--led-amber);
+  animation: midi-pulse 0.7s ease-in-out infinite;
+}
+
+/* Pulsing ring around a control waiting to learn a CC. */
+.midi-armed::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: 5;
+  border-radius: 7px;
+  border: 2px solid var(--led-amber);
+  box-shadow: 0 0 8px rgba(255, 194, 62, 0.6);
+  pointer-events: none;
+  animation: midi-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes midi-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
 /* ============================= CONTEXT MENU ============================= */
 
 .context-menu {

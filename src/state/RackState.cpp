@@ -40,6 +40,17 @@ juce::String rackStateToJson (const AudioRackProcessor& processor)
     ab->setProperty ("b", bankToVar (processor.bankSnapshot (1)));
     root->setProperty ("ab", juce::var (ab));
 
+    // MIDI learn map, as [ [cc, paramId], ... ].
+    juce::Array<juce::var> midi;
+    for (const auto& [cc, id] : processor.midiMappings())
+    {
+        juce::Array<juce::var> entry;
+        entry.add (cc);
+        entry.add (id);
+        midi.add (juce::var (entry));
+    }
+    root->setProperty ("midi", midi);
+
     auto* editor = new juce::DynamicObject();
     editor->setProperty ("width",  processor.editorSize().x);
     editor->setProperty ("height", processor.editorSize().y);
@@ -120,7 +131,16 @@ bool applyRackStateJson (AudioRackProcessor& processor, const juce::String& json
 
     processor.abStateChanged.sendChangeMessage();
 
-    // 4. Editor size.
+    // 4. MIDI learn map (replace whatever was there; absent = no mappings).
+    processor.clearAllMidiMappings();
+    if (const auto* midi = root.getProperty ("midi", juce::var()).getArray())
+        for (const auto& entry : *midi)
+            if (const auto* pair = entry.getArray(); pair != nullptr && pair->size() == 2)
+                processor.setMidiMapping (static_cast<int> (pair->getUnchecked (0)),
+                                          pair->getUnchecked (1).toString());
+    processor.midiStateChanged.sendChangeMessage();
+
+    // 5. Editor size.
     const auto editor = root.getProperty ("editor", juce::var());
     if (editor.isObject())
         processor.setEditorSize ({ editor.getProperty ("width",  1300),

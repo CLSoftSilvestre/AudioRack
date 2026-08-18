@@ -19,6 +19,8 @@ namespace audiorack
         { type: "mount", slot, moduleId } / { type: "unmount", slot }
         { type: "move",  from, to } / { type: "duplicate", from, to }
         { type: "abSelect", bank } / { type: "abCopy" }
+        { type: "midiLearn", id } / { type: "midiClearLearn" }
+        { type: "midiForget", id }
 
       native -> web
         "ar_params" { p: [[id, value01, displayText], ...] }
@@ -26,6 +28,7 @@ namespace audiorack
                       modules: [{id, name, category, units}, ...] }
         "ar_meters" { m: [[slot, peakL, peakR, rmsL, rmsR, grDb], ...] }
         "ar_ab"     { bank: 0 | 1 }
+        "ar_midi"   { armed: id | null, map: [[id, cc], ...] }
 
     Threading: parameter-change callbacks can arrive on the audio thread, so
     they only flip an atomic dirty flag; a 60 Hz timer folds the meter ring
@@ -50,6 +53,7 @@ private:
     void handleUiEvent (const juce::var& payload);
     void sendRackLayout();
     void sendAbState();
+    void sendMidiState();
     void sendAllParameters();
     void flushDirtyParameters();
     void pumpMeters();

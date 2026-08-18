@@ -17,6 +17,7 @@ import { SaturatorUnit } from "../units/SaturatorUnit";
 import { DelayUnit } from "../units/DelayUnit";
 import { ReverbUnit } from "../units/ReverbUnit";
 import { MAX_SLOTS, slotParamID } from "../bridge/protocol";
+import { openContextMenu, type MenuItem } from "../widgets/contextMenu";
 import type { Store } from "../store";
 import type { DragManager } from "./dnd";
 
@@ -46,7 +47,6 @@ export class RackFrame {
 
   private slotEls: HTMLElement[] = [];
   private mounted = new Map<number, Mounted>();
-  private menu: HTMLElement | null = null;
 
   constructor(
     private store: Store,
@@ -85,10 +85,6 @@ export class RackFrame {
     }
 
     this.drag.setSlots(this.slotEls);
-
-    document.addEventListener("pointerdown", (e) => {
-      if (this.menu && !this.menu.contains(e.target as Node)) this.closeMenu();
-    });
 
     store.onRack((slots) => this.sync(slots));
   }
@@ -134,58 +130,31 @@ export class RackFrame {
 
   // --- menus --------------------------------------------------------------------
 
-  private buildMenu(x: number, y: number, items: [string, () => void][]): void {
-    this.closeMenu();
-
-    const menu = document.createElement("div");
-    menu.className = "context-menu";
-
-    for (const [label, action] of items) {
-      const item = document.createElement("button");
-      item.className = "context-item";
-      item.textContent = label;
-      item.addEventListener("click", () => {
-        action();
-        this.closeMenu();
-      });
-      menu.appendChild(item);
-    }
-
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
-    document.body.appendChild(menu);
-    this.menu = menu;
-  }
-
   private openModulePicker(e: MouseEvent, slot: number): void {
-    const items: [string, () => void][] = this.store
-      .availableModules()
-      .map((m) => [
-        `${m.name}  ·  ${m.category} · ${m.units}U`,
-        () => this.store.mount(slot, m.id),
-      ]);
+    const items: MenuItem[] = this.store.availableModules().map((m) => ({
+      label: `${m.name}  ·  ${m.category} · ${m.units}U`,
+      action: () => this.store.mount(slot, m.id),
+    }));
 
-    if (items.length > 0) this.buildMenu(e.clientX, e.clientY, items);
+    openContextMenu(e.clientX, e.clientY, items);
   }
 
   private openUnitMenu(e: MouseEvent, slot: number): void {
     const bypassId = slotParamID(slot, "bypass");
     const bypassed = this.store.param(bypassId).value01 >= 0.5;
 
-    const items: [string, () => void][] = [
-      [bypassed ? "Enable" : "Bypass", () => this.store.setParam(bypassId, bypassed ? 0 : 1)],
+    const items: MenuItem[] = [
+      {
+        label: bypassed ? "Enable" : "Bypass",
+        action: () => this.store.setParam(bypassId, bypassed ? 0 : 1),
+      },
     ];
 
     const target = this.store.firstEmptySlot();
-    if (target >= 0) items.push(["Duplicate", () => this.store.duplicate(slot, target)]);
+    if (target >= 0) items.push({ label: "Duplicate", action: () => this.store.duplicate(slot, target) });
 
-    items.push(["Remove", () => this.store.unmount(slot)]);
+    items.push({ label: "Remove", action: () => this.store.unmount(slot) });
 
-    this.buildMenu(e.clientX, e.clientY, items);
-  }
-
-  private closeMenu(): void {
-    this.menu?.remove();
-    this.menu = null;
+    openContextMenu(e.clientX, e.clientY, items);
   }
 }

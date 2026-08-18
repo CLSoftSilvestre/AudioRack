@@ -3,7 +3,14 @@
  *  browser so `npm run dev` works without the plugin.
  */
 
-import type { AbMessage, MetersMessage, ParamsMessage, RackMessage, UiEvent } from "./protocol";
+import type {
+  AbMessage,
+  MetersMessage,
+  MidiMessage,
+  ParamsMessage,
+  RackMessage,
+  UiEvent,
+} from "./protocol";
 import { MAX_SLOTS } from "./protocol";
 import { PREVIEW_SCHEMA } from "./previewSchema";
 
@@ -25,6 +32,7 @@ export interface Bridge {
   onParams(fn: (msg: ParamsMessage) => void): void;
   onMeters(fn: (msg: MetersMessage) => void): void;
   onAb(fn: (msg: AbMessage) => void): void;
+  onMidi(fn: (msg: MidiMessage) => void): void;
 }
 
 class NativeBridge implements Bridge {
@@ -47,6 +55,9 @@ class NativeBridge implements Bridge {
   onAb(fn: (msg: AbMessage) => void): void {
     this.backend.addEventListener("ar_ab", (p) => fn(p as AbMessage));
   }
+  onMidi(fn: (msg: MidiMessage) => void): void {
+    this.backend.addEventListener("ar_midi", (p) => fn(p as MidiMessage));
+  }
 }
 
 /** Standalone-browser stand-in: one Gain mounted, params locally echoed,
@@ -59,9 +70,16 @@ class MockBridge implements Bridge {
   private paramListeners: ((msg: ParamsMessage) => void)[] = [];
   private meterListeners: ((msg: MetersMessage) => void)[] = [];
   private abListeners: ((msg: AbMessage) => void)[] = [];
+  private midiListeners: ((msg: MidiMessage) => void)[] = [];
 
   private banks: [Map<string, number>, Map<string, number>] = [new Map(), new Map()];
   private activeBank = 0;
+
+  // Browser preview has no real MIDI hardware, so arming "learns" a synthetic
+  // CC after a short delay to demonstrate the flow.
+  private midiArmed: string | null = null;
+  private midiMap = new Map<string, number>();
+  private nextCc = 20;
 
   // "?full" mounts every slot (frame-budget benchmark); "?demo" mounts one
   // of each module type (visual review).
@@ -85,6 +103,7 @@ class MockBridge implements Bridge {
         queueMicrotask(() => {
           this.emitRack();
           this.emitAb();
+          this.emitMidi();
           this.emitAllParams();
         });
         break;
@@ -128,10 +147,38 @@ class MockBridge implements Bridge {
         this.banks[1 - this.activeBank] = new Map(this.banks[this.activeBank]);
         this.emitAb();
         break;
+      case "midiLearn": {
+        this.midiArmed = event.id;
+        this.emitMidi();
+        const armedId = event.id;
+        window.setTimeout(() => {
+          if (this.midiArmed !== armedId) return; // cancelled/re-armed meanwhile
+          this.midiMap.set(armedId, this.nextCc++);
+          this.midiArmed = null;
+          this.emitMidi();
+        }, 1200);
+        break;
+      }
+      case "midiClearLearn":
+        this.midiArmed = null;
+        this.emitMidi();
+        break;
+      case "midiForget":
+        this.midiMap.delete(event.id);
+        this.emitMidi();
+        break;
       case "beginGesture":
       case "endGesture":
         break;
     }
+  }
+
+  private emitMidi(): void {
+    const msg: MidiMessage = {
+      armed: this.midiArmed,
+      map: [...this.midiMap.entries()],
+    };
+    this.midiListeners.forEach((fn) => fn(msg));
   }
 
   private captureBank(bank: number): void {
@@ -154,6 +201,9 @@ class MockBridge implements Bridge {
   }
   onAb(fn: (msg: AbMessage) => void): void {
     this.abListeners.push(fn);
+  }
+  onMidi(fn: (msg: MidiMessage) => void): void {
+    this.midiListeners.push(fn);
   }
 
   private schemaFor(id: string): { module: string; suffix: string } | null {

@@ -1,5 +1,46 @@
 # Progress
 
+## 2026-08-18 (later still ×3) — M7b MIDI learn
+
+Completes M7 (Rack UX). See ADR 0006.
+
+### Done
+
+- **MIDI input enabled** — `NEEDS_MIDI_INPUT TRUE` + `acceptsMidi()`. VST3/AU now
+  expose a MIDI input; the standalone accepts a MIDI device. Audio bus layout
+  (incl. sidechain) unchanged.
+- **Realtime-safe CC → parameter** — audio thread raw-parses control-change
+  bytes (no `MidiMessage`, no allocation), coalesces the newest value per
+  parameter into atomics; the 30 Hz message-thread timer applies them with
+  `setValueNotifyingHost` (the only RT-unsafe call, kept off the audio thread).
+  `ccToParam[128]` atomics are the map; the message thread owns all mutation.
+- **Learn handshake** — arm a parameter (right-click → MIDI Learn); the next CC
+  binds to it. One parameter ↔ at most one CC. Armed ring + "CCn" badge in the UI.
+- **Wired for knobs & switches**; selectors excluded (right-click there already
+  steps their value). Shared `contextMenu.ts` now backs both rack and control
+  menus.
+- **Persistence** — mappings saved as `"midi": [[cc, paramId], ...]`; load
+  replaces the live map; armed state is transient.
+- **Bridge** — outbound `ar_midi { armed, map }`; inbound `midiLearn` /
+  `midiClearLearn` / `midiForget`. Browser mock binds a synthetic CC 1.2 s after
+  arming for preview.
+
+### Verified
+
+- 37 DSP tests green (M7b adds no DSP).
+- `pluginval --strictness-level 10` passes **with MIDI input enabled** —
+  audio-processing (MIDI), Editor + Editor Automation, and param/state fuzz;
+  zero warnings.
+- Clean `tsc` + Vite build. Headless-preview screenshots confirm the armed
+  amber ring and the resulting `CC20` badge (`?miditest` QA hook drives the real
+  right-click → MIDI Learn path).
+
+### Next (M8 — ship)
+
+Installers (pkg / InnoSetup), code signing + notarisation docs, crash-safe
+state, performance pass, user manual. Still open: host-automation hands-on pass
+in a real DAW.
+
 ## 2026-08-18 (later still ×2) — M7a rack UX (drag & drop + A/B)
 
 M7 is split into two commits; this is **M7a**. M7b (MIDI learn) is next.

@@ -4,6 +4,8 @@
 
 #include <array>
 #include <map>
+#include <utility>
+#include <vector>
 
 #include "../core/RackEngine.h"
 
@@ -42,7 +44,7 @@ public:
     bool hasEditor() const override { return true; }
 
     const juce::String getName() const override { return JucePlugin_Name; }
-    bool acceptsMidi() const override { return false; }
+    bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 0.0; }
@@ -101,6 +103,32 @@ public:
     void loadBankSnapshot (int bank, std::map<juce::String, float> snapshot);
     void setActiveBank (int bank) noexcept { currentBank = juce::jlimit (0, 1, bank); }
 
+    // --- MIDI learn (message thread, except where noted) ----------------------
+    //
+    // A continuous controller (CC) can be mapped to any host parameter. The map
+    // (CC -> parameter index) is an array of atomics: the audio thread only
+    // reads it and stashes the newest value per parameter; the message-thread
+    // timer applies those values (setValueNotifyingHost is not RT-safe) and owns
+    // all mutation. Learning: arm a parameter, then the next CC seen on the
+    // audio thread binds to it.
+
+    void armMidiLearn (const juce::String& paramID);
+    void cancelMidiLearn();
+    void forgetMidiMapping (const juce::String& paramID);
+
+    /// Empty when nothing is armed.
+    juce::String midiArmedParamId() const;
+
+    /// (CC number, parameter id) for every current mapping.
+    std::vector<std::pair<int, juce::String>> midiMappings() const;
+
+    // Used by state load.
+    void clearAllMidiMappings();
+    void setMidiMapping (int cc, const juce::String& paramID);
+
+    /// Broadcasts when the armed parameter or the CC map changes.
+    juce::ChangeBroadcaster midiStateChanged;
+
     // --- Accessors ------------------------------------------------------------
 
     RackEngine& rackEngine() noexcept { return engine; }
@@ -120,6 +148,11 @@ private:
     void copyModuleParams (int fromSlot, int toSlot, const juce::String& moduleId);
     void applyBank (int bank);
 
+    void handleControlChange (int cc, int value) noexcept;   // audio thread
+    void bindMidiCc (int cc, int paramIndex);                // message thread
+    void drainMidi();                                        // message thread
+    int  paramIndexFor (const juce::String& paramID) const;
+
     static BusesProperties makeBusesProperties();
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
@@ -130,6 +163,18 @@ private:
 
     std::array<std::map<juce::String, float>, 2> banks;   // value01 snapshots
     int currentBank = 0;
+
+    // MIDI learn. Parameter index space == position in automatableParams.
+    std::vector<juce::RangedAudioParameter*> automatableParams;
+    std::map<juce::String, int>              paramIdToIndex;
+
+    std::array<std::atomic<int>, 128> ccToParam;          // CC -> param index, -1 = unmapped
+    std::atomic<int> learnArmed { -1 };                   // audio-visible arm flag
+    std::atomic<int> pendingLearnedCc { -1 };             // audio -> message handoff
+    int              messageArmedIndex = -1;              // message-thread authority
+
+    std::unique_ptr<std::atomic<float>[]> midiValue;      // newest value per param
+    std::unique_ptr<std::atomic<bool>[]>  midiDirty;
 
     std::atomic<int> editorWidth { 1300 }, editorHeight { 780 };
 

@@ -68,7 +68,7 @@ juce_add_plugin(AudioRack
     PLUGIN_CODE                 ARk1
     FORMATS                     ${AUDIORACK_FORMATS}
     IS_SYNTH                    FALSE
-    NEEDS_MIDI_INPUT            FALSE
+    NEEDS_MIDI_INPUT            TRUE
     NEEDS_MIDI_OUTPUT           FALSE
     IS_MIDI_EFFECT              FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
