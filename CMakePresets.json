@@ -28,6 +28,19 @@
       "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64" }
     },
     {
+      "name": "macos-tsan",
+      "inherits": "macos",
+      "displayName": "macOS ThreadSanitizer (tests only)",
+      "binaryDir": "${sourceDir}/build/macos-tsan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "AUDIORACK_BUILD_PLUGIN": "OFF",
+        "CMAKE_C_FLAGS": "-fsanitize=thread",
+        "CMAKE_CXX_FLAGS": "-fsanitize=thread",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread"
+      }
+    },
+    {
       "name": "windows",
       "displayName": "Windows x64 (Visual Studio)",
       "generator": "Visual Studio 17 2022",
@@ -40,6 +53,7 @@
     { "name": "macos", "configurePreset": "macos" },
     { "name": "macos-debug", "configurePreset": "macos-debug" },
     { "name": "macos-universal", "configurePreset": "macos-universal" },
+    { "name": "macos-tsan", "configurePreset": "macos-tsan" },
     { "name": "windows", "configurePreset": "windows", "configuration": "Release" }
   ],
   "testPresets": [

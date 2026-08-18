@@ -64,3 +64,16 @@ jobs:
         with:
           name: audiorack-${{ matrix.name }}
           path: ${{ matrix.artefacts }}
+
+  tsan:
+    name: ThreadSanitizer (lock-free queue)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install ninja
+      - name: Configure (TSan, tests only)
+        run: cmake --preset macos-tsan
+      - name: Build
+        run: cmake --build --preset macos-tsan
+      - name: Run queue + engine tests under TSan
+        run: ./build/macos-tsan/tests/audiorack_tests "[spsc],[engine]"

@@ -16,6 +16,7 @@ if(APPLE AND NOT CMAKE_OSX_DEPLOYMENT_TARGET)
 endif()
 
 option(AUDIORACK_BUILD_TESTS "Build Catch2 unit tests" ON)
+option(AUDIORACK_BUILD_PLUGIN "Build the plugin/standalone targets" ON)
 
 # --- Dependencies -----------------------------------------------------------
 
@@ -48,7 +49,19 @@ function(audiorack_strict_sources)
     set_source_files_properties(${ARGV} PROPERTIES COMPILE_OPTIONS "${flags}")
 endfunction()
 
-add_subdirectory(src)
+# First-party engine/DSP sources, compiled into both the plugin and the test
+# runner (kept as lists rather than a static lib so JUCE module sources are
+# only ever compiled into final targets).
+set(AUDIORACK_CORE_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/core/RackEngine.cpp
+    ${CMAKE_SOURCE_DIR}/src/core/ModuleRegistry.cpp)
+
+set(AUDIORACK_DSP_SOURCES
+    ${CMAKE_SOURCE_DIR}/src/dsp/gain/GainModule.cpp)
+
+if(AUDIORACK_BUILD_PLUGIN)
+    add_subdirectory(src)
+endif()
 
 if(AUDIORACK_BUILD_TESTS)
     enable_testing()
