@@ -1,0 +1,19 @@
+# Build output
+build/
+cmake-build-*/
+
+# UI toolchain
+ui/node_modules/
+ui/dist/
+src/ui/dist/
+
+# IDE / editor
+.vscode/
+.idea/
+*.xcworkspace
+.DS_Store
+
+# Local tools
+.pluginval/
+compile_commands.json
+AudioRack-CLAUDE.md

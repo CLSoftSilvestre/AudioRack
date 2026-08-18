@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS
+            os: macos-14
+            configure: cmake --preset macos-universal
+            build: cmake --build --preset macos-universal
+            test: ctest --test-dir build/macos-universal --output-on-failure
+            artefacts: build/macos-universal/AudioRack_artefacts
+          - name: Windows
+            os: windows-2022
+            configure: cmake --preset windows
+            build: cmake --build --preset windows
+            test: ctest --test-dir build/windows -C Release --output-on-failure
+            artefacts: build/windows/AudioRack_artefacts
+
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: Configure
+        run: ${{ matrix.configure }}
+
+      - name: Build
+        run: ${{ matrix.build }}
+
+      - name: Test
+        run: ${{ matrix.test }}
+
+      - name: Run pluginval (VST3)
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            curl -LO https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+            unzip -q pluginval_macOS.zip
+            PLUGINVAL="pluginval.app/Contents/MacOS/pluginval"
+            VST3=$(find build -name "*.vst3" -maxdepth 6 | head -1)
+          else
+            curl -LO https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip
+            unzip -q pluginval_Windows.zip
+            PLUGINVAL="./pluginval.exe"
+            VST3=$(find build -name "*.vst3" -type d | head -1)
+          fi
+          "$PLUGINVAL" --strictness-level 10 --validate-in-process --output-dir pluginval-logs "$VST3"
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: audiorack-${{ matrix.name }}
+          path: ${{ matrix.artefacts }}

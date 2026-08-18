@@ -1,0 +1,49 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 22, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "macos",
+      "displayName": "macOS (Ninja)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/macos",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "11.0"
+      },
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" }
+    },
+    {
+      "name": "macos-debug",
+      "inherits": "macos",
+      "displayName": "macOS Debug (Ninja)",
+      "binaryDir": "${sourceDir}/build/macos-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "macos-universal",
+      "inherits": "macos",
+      "displayName": "macOS Universal Release",
+      "binaryDir": "${sourceDir}/build/macos-universal",
+      "cacheVariables": { "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64" }
+    },
+    {
+      "name": "windows",
+      "displayName": "Windows x64 (Visual Studio)",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/windows",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "macos", "configurePreset": "macos" },
+    { "name": "macos-debug", "configurePreset": "macos-debug" },
+    { "name": "macos-universal", "configurePreset": "macos-universal" },
+    { "name": "windows", "configurePreset": "windows", "configuration": "Release" }
+  ],
+  "testPresets": [
+    { "name": "macos", "configurePreset": "macos", "output": { "outputOnFailure": true } },
+    { "name": "windows", "configurePreset": "windows", "configuration": "Release", "output": { "outputOnFailure": true } }
+  ]
+}
