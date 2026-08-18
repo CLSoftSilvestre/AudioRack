@@ -998,12 +998,19 @@ body.dragging * {
   border-left: 1px solid rgba(58, 47, 30, 0.2); border-right: 1px solid rgba(58, 47, 30, 0.2); }
 .sat-meter { flex: 1; }
 
-/* --- Delay layout --- */
-.delay-time { gap: 10px; padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
-.delay-knobs { gap: 6px; padding: 0 10px; }
-.delay-switches { flex-direction: column; gap: 6px; padding: 0 8px;
+/* --- Delay layout ---
+   The delay packs six sections; tightened gaps + a slimmer stereo ladder keep
+   the whole face inside the rack width so the bypass/right ear never overflow. */
+.unit-delay .unit-face { gap: 9px; }
+.delay-time { gap: 6px; padding-right: 8px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
+.delay-knobs { gap: 4px; padding: 0 6px; }
+.delay-switches { flex-direction: column; gap: 6px; padding: 0 6px;
   border-left: 1px solid rgba(226, 224, 216, 0.14); border-right: 1px solid rgba(226, 224, 216, 0.14); }
-.delay-meter { flex: 1; }
+.delay-meter { flex: 1; min-width: 0; }
+/* Slimmer LED ladder just for the delay (its section is the widest). */
+.unit-delay .ladder { padding: 8px 8px 12px; }
+.unit-delay .ladder-row { gap: 2px; }
+.unit-delay .ladder-seg { width: 10px; height: 8px; }
 
 /* --- Reverb layout --- */
 .reverb-knobs { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 10px;
