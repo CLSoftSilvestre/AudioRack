@@ -1,6 +1,7 @@
-/** EQ-6 "Parametric EQ" — 2U, graphite face dominated by the live response
- *  curve. Six band strips below (type selector + freq/gain/Q knobs +
- *  on/solo), output trim at the right.
+/** EQ-6 "Parametric EQ" — 3U, graphite face. A tall live response curve on the
+ *  left; the six band strips (type selector + freq/gain/Q knobs + on) sit to its
+ *  right at full height so every control fits; output trim + bypass on the far
+ *  right.
  */
 
 import { EqCurve, type EqBandValues } from "../widgets/EqCurve";
@@ -27,14 +28,14 @@ export class EqUnit {
       this.model.push({ type: 0, freq: 1000, gain: 0, q: 0.71, on: true, solo: false });
     }
 
-    // Header: brand + curve.
+    // Left column: brand + tall response curve.
     const top = document.createElement("div");
-    top.className = "eq-top";
+    top.className = "eq-left";
     top.appendChild(brandBlock("EQ-6 &middot; PARAMETRIC", "EQ SERIES"));
 
     this.curve = new EqCurve(
-      560,
-      150,
+      430,
+      196,
       (band, freq, gain) => {
         this.store.setParam(id(band, "freq"), this.freqTo01(freq));
         if (this.model[band].type <= 2)

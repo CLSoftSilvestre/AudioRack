@@ -1,4 +1,4 @@
-# Parametric EQ — EQ-6 (EQ, 2U)
+# Parametric EQ — EQ-6 (EQ, 3U)
 
 Six-band parametric equaliser. All coefficients are RBJ Audio-EQ-Cookbook
 biquads (Robert Bristow-Johnson); the UI draws the magnitude response from the

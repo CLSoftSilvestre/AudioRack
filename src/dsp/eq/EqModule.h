@@ -17,7 +17,7 @@ namespace audiorack
 class EqModule final : public AudioModule
 {
 public:
-    static constexpr ModuleDescriptor kDescriptor { "eq", "Parametric EQ", "EQ", 2 };
+    static constexpr ModuleDescriptor kDescriptor { "eq", "Parametric EQ", "EQ", 3 };
     static constexpr int kBands = 6;
 
     static ModuleTypeInfo typeInfo();

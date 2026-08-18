@@ -238,7 +238,7 @@ class MockBridge implements Bridge {
         { id: "gain", name: "Gain", category: "Utility", units: 1 },
         { id: "comp", name: "Compressor", category: "Dynamics", units: 2 },
         { id: "gate", name: "Gate", category: "Dynamics", units: 1 },
-        { id: "eq", name: "Parametric EQ", category: "EQ", units: 2 },
+        { id: "eq", name: "Parametric EQ", category: "EQ", units: 3 },
         { id: "sat", name: "Saturator", category: "Tone", units: 1 },
         { id: "delay", name: "Delay", category: "Time", units: 2 },
         { id: "reverb", name: "Reverb", category: "Time", units: 3 },
