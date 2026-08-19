@@ -28,7 +28,7 @@ const lin = (min: number, max: number, unit: string, digits = 1) => (v: number) 
   `${(min + (max - min) * v).toFixed(digits)} ${unit}`;
 
 const eqBand = (i: number): PreviewParam[] => [
-  { suffix: `b${i}type`, default01: 0, format: choice(["Bell", "Low Shelf", "High Shelf", "High Pass", "Low Pass"]) },
+  { suffix: `b${i}type`, default01: 0, format: choice(["Bell", "Lo Shelf", "Hi Shelf", "HPF", "LPF"]) },
   { suffix: `b${i}freq`, default01: 0.5, format: hz(20, 20000, 632) },
   { suffix: `b${i}gain`, default01: 0.5, format: lin(-18, 18, "dB") },
   { suffix: `b${i}q`, default01: 0.28, format: (v) => skew(0.1, 10, 0.71, v).toFixed(2) },

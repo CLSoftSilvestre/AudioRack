@@ -36,7 +36,7 @@ void EqModule::declareParameters (ParameterBuilder& b)
         const auto bandName = "Band " + juce::String (i + 1) + " ";
 
         b.add ({ "b" + n + "type", bandName + "Type", { 0.0f, 4.0f, 1.0f }, 0.0f, "",
-                 { "Bell", "Low Shelf", "High Shelf", "High Pass", "Low Pass" } });
+                 { "Bell", "Lo Shelf", "Hi Shelf", "HPF", "LPF" } });
         b.add ({ "b" + n + "freq", bandName + "Freq", freqRange, defaults[i], "Hz" });
         b.add ({ "b" + n + "gain", bandName + "Gain", { -18.0f, 18.0f, 0.1f }, 0.0f, "dB" });
         b.add ({ "b" + n + "q",    bandName + "Q",    qRange, 0.71f, "" });

@@ -987,6 +987,24 @@ body.dragging * {
   border-top: 2px solid var(--band-color, #888);
 }
 
+/* Lock every band's type LCD to the strip width so switching Bell -> Lo Shelf
+   never reflows the strips; long labels truncate with an ellipsis instead. */
+.unit-eq .eq-strip .selector {
+  width: 100%;
+}
+.unit-eq .eq-strip .selector-window {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.unit-eq .eq-strip .selector-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .eq-rail {
   position: absolute;
   /* centred in the free space between the band-6 strip and the right rack edge,
