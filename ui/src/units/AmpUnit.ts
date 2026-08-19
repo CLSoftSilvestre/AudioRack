@@ -1,20 +1,18 @@
 /** AMP-1 "Guitar Amp" — 3U, black-tolex face with a gold control strip and a
- *  grille-backed VU. Cascaded tube preamp, passive-style tone stack and a
+ *  grille cloth panel. Cascaded tube preamp, passive-style tone stack and a
  *  switchable speaker cabinet (1x12 / 2x12 / 4x12) drawn live from the CAB
  *  selector.
  *
  *  brand | CHANNEL | GAIN BASS MID TREBLE PRESENCE MASTER | CAB + speakers |
- *  grille + VU | power
+ *  grille | power
  */
 
-import { VuMeter } from "../widgets/VuMeter";
 import { paramID } from "../bridge/protocol";
 import { paramKnob, paramSelector, bypassControl, brandBlock, chassis } from "./unitKit";
 import type { Store } from "../store";
 
 export class AmpUnit {
   readonly el: HTMLElement;
-  private vu: VuMeter;
   private unsubs: (() => void)[] = [];
 
   constructor(store: Store, slot: number) {
@@ -68,13 +66,10 @@ export class AmpUnit {
       }),
     );
 
-    // Grille-backed output VU.
+    // Grille cloth panel filling the rest of the face.
     const grille = document.createElement("div");
     grille.className = "unit-section amp-grille";
-    this.vu = new VuMeter("output");
-    grille.appendChild(this.vu.el);
     face.appendChild(grille);
-    this.unsubs.push(store.onMeters(slot, (f) => this.vu.setLevel(Math.max(f.rmsL, f.rmsR) * 1.228)));
 
     const bypass = bypassControl(store, slot, this.el);
     face.appendChild(bypass.el);
@@ -83,6 +78,5 @@ export class AmpUnit {
 
   dispose(): void {
     this.unsubs.forEach((fn) => fn());
-    this.vu.dispose();
   }
 }
