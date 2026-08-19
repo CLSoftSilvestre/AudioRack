@@ -580,7 +580,7 @@ body.dragging * {
 }
 
 .unit.bypassed .unit-face {
-  filter: saturate(0.75) brightness(0.94);
+  filter: saturate(0.5) brightness(0.8);
 }
 
 .unit-section {
@@ -1564,27 +1564,34 @@ body.dragging * {
     0 2px 3px rgba(0, 0, 0, 0.55);
 }
 
-/* Red lens; rocks on its X axis to show which side is pressed. */
+/* Red lens; rocks on its X axis to show which side is pressed.
+ *
+ *  Only `transform` (the mechanical throw) is transitioned. The illumination
+ *  lives on the ::before overlay and fades via opacity, which the compositor
+ *  handles without repainting — animating background/box-shadow here made the
+ *  blurred glow repaint and flash neighbouring rockers on every toggle. */
 .rocker-face {
   position: absolute;
   inset: 4px;
   border-radius: 4px;
   transform-style: preserve-3d;
+  backface-visibility: hidden;
   transform: rotateX(-18deg); /* OFF: "O" (bottom) pressed in, "I" raised */
   transform-origin: 50% 50%;
-  transition:
-    transform 0.13s cubic-bezier(0.2, 0.75, 0.3, 1),
-    background 0.13s ease,
-    box-shadow 0.13s ease;
-  background: linear-gradient(180deg, #7c1e22 0%, #56141a 46%, #390d11 100%);
+  transition: transform 0.13s cubic-bezier(0.2, 0.75, 0.3, 1);
+  background: linear-gradient(180deg, #6e1a1f 0%, #4a1116 46%, #300a0e 100%);
   box-shadow:
     inset 0 2px 3px rgba(0, 0, 0, 0.5),
     inset 0 -3px 5px rgba(0, 0, 0, 0.62),
     inset 0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
-.rocker.on .rocker-face {
-  transform: rotateX(18deg); /* ON: "I" (top) pressed in */
+/* Lit overlay: bright red lens + outer glow, faded in with opacity only. */
+.rocker-face::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   background: linear-gradient(180deg, #ff6b60 0%, #ee242c 42%, #b0141b 100%);
   box-shadow:
     inset 0 2px 4px rgba(255, 190, 180, 0.55),
@@ -1592,6 +1599,17 @@ body.dragging * {
     inset 0 0 0 1px rgba(120, 12, 16, 0.6),
     0 0 9px rgba(240, 42, 46, 0.75),
     0 0 20px rgba(240, 42, 46, 0.45);
+  opacity: 0;
+  transition: opacity 0.13s ease;
+  pointer-events: none;
+}
+
+.rocker.on .rocker-face {
+  transform: rotateX(18deg); /* ON: "I" (top) pressed in */
+}
+
+.rocker.on .rocker-face::before {
+  opacity: 1;
 }
 
 /* Soft specular sheen across the upper curve of the lens. */
