@@ -37,7 +37,13 @@ export class VuMeter {
     this.el.className = "vu";
     this.el.setAttribute("role", "meter");
     this.el.setAttribute("aria-label", `${label} meter`);
-    if (mode === "gr") this.position = 1; // GR needle rests at 0 (right)
+    // GR needle rests at 0 dB of reduction (right-hand end): both the current
+    // position and the target must start there, or the ballistics drag it to
+    // full reduction on the first tick and leave it there until audio arrives.
+    if (mode === "gr") {
+      this.position = 1;
+      this.target = 1;
+    }
 
     this.el.innerHTML = `
       <div class="vu-face">
