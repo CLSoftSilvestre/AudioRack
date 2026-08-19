@@ -95,6 +95,17 @@ export const PREVIEW_SCHEMA: Record<string, PreviewParam[]> = {
     { suffix: "autogain", default01: 1, format: choice(["Off", "On"]) },
   ],
 
+  amp: [
+    { suffix: "channel", default01: 0, format: choice(["Clean", "Crunch", "Lead"]) },
+    { suffix: "gain", default01: 0.5, format: (v) => (v * 10).toFixed(1) },
+    { suffix: "bass", default01: 0.5, format: (v) => (v * 10).toFixed(1) },
+    { suffix: "mid", default01: 0.5, format: (v) => (v * 10).toFixed(1) },
+    { suffix: "treble", default01: 0.5, format: (v) => (v * 10).toFixed(1) },
+    { suffix: "presence", default01: 0.5, format: (v) => (v * 10).toFixed(1) },
+    { suffix: "master", default01: 0.5, format: (v) => (v * 10).toFixed(1) },
+    { suffix: "cab", default01: 0.5, format: choice(["1x12", "2x12", "4x12"]) },
+  ],
+
   delay: [
     { suffix: "time", default01: 0.4, format: hz(1, 4000, 350, "ms") },
     { suffix: "sync", default01: 0, format: choice(["Free", "Sync"]) },

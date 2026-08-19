@@ -1019,6 +1019,83 @@ body.dragging * {
 .reverb-center { flex-direction: column; gap: 8px; padding: 0 12px; }
 .reverb-meter { flex: 1; }
 
+/* ============================== GUITAR AMP (3U) ============================== */
+
+/* Black tolex head: coarse vinyl grain over a near-black field. */
+.unit-amp .unit-face {
+  gap: 12px;
+  background:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="90" height="90"><filter id="t"><feTurbulence type="fractalNoise" baseFrequency="0.18 0.32" numOctaves="2"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.09"/></feComponentTransfer></filter><rect width="90" height="90" filter="url(%23t)"/></svg>'),
+    linear-gradient(180deg, #201f1e 0%, #191817 40%, #131211 78%, #0d0c0b 100%);
+}
+.unit-amp .unit-ear { background: linear-gradient(90deg, #141312 0%, #26241f 40%, #141312 100%); }
+.unit-amp .unit-ear.right { background: linear-gradient(270deg, #141312 0%, #26241f 40%, #141312 100%); }
+
+.amp-channel { padding-right: 2px; }
+
+/* Gold Fender-style control plate carrying the knobs, with dark silkscreen. */
+.amp-knobs {
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px),
+    linear-gradient(180deg, #e8cf8f 0%, #d4b46a 38%, #c2a054 70%, #a8863f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.amp-knobs .knob-label { color: #2c2110; }
+.amp-knobs .tick-major { stroke: rgba(44, 33, 16, 0.8); }
+.amp-knobs .tick-minor { stroke: rgba(44, 33, 16, 0.4); }
+.amp-knobs .tick-text { fill: rgba(44, 33, 16, 0.7); }
+
+/* Cabinet: selector plus a live speaker diagram (1 / 2 / 4 cones). */
+.amp-cab { flex-direction: column; gap: 5px; padding: 0 4px; }
+.amp-speakers {
+  display: grid;
+  gap: 4px;
+  width: 38px;
+  height: 38px;
+  padding: 4px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #1b1a18 0%, #0e0d0c 100%);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  place-items: center;
+}
+.amp-speakers .spk {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 42%, #4a4640 0%, #2a2723 45%, #141210 72%, #0a0908 100%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.12), inset 0 -2px 3px rgba(0, 0, 0, 0.7);
+}
+/* Layouts per cab: 1x12 = one big centred cone, 2x12 = a vertical pair,
+   4x12 = the classic 2x2 stack. */
+.amp-speakers[data-cab="1x12"] { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.amp-speakers[data-cab="1x12"] .spk:nth-child(n+2) { display: none; }
+.amp-speakers[data-cab="2x12"] { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+.amp-speakers[data-cab="2x12"] .spk:nth-child(n+3) { display: none; }
+
+/* Grille cloth panel behind the output VU. */
+.amp-grille {
+  flex: 1;
+  min-width: 0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.32) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.32) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, #6a5a3c 0%, #52462f 50%, #3c3222 100%);
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
 /* ============================== GR LADDER ============================== */
 
 .gr-ladder {

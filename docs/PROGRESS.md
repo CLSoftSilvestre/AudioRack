@@ -1,5 +1,55 @@
 # Progress
 
+## 2026-08-19 — Guitar Amp module (AMP-1)
+
+New rack module: a guitar amplifier with cascaded tube preamp, passive-style
+tone stack, power-amp saturation and switchable analytic speaker cabinets
+(1x12 / 2x12 / 4x12). Ninth module; adds a new "Amp" category. See
+`docs/modules/amp.md`.
+
+### Design decisions (confirmed with the user)
+
+- **Cabinets = analytic filter model**, not impulse-response files. Each cab is a
+  chain of biquads (sub-resonance HP, box resonance, low-mid scoop, cone-breakup
+  peak, top-end roll-off) plus a short mic-position comb. Fully original, no
+  external assets, legally clean, tiny bundle, click-free — chosen over
+  synthesized-IR convolution and (rejected) bundling copyrighted real IRs.
+- **Three channels** — Clean / Crunch / Lead — selecting how many cascaded
+  preamp stages the signal runs through, over a shared Bass/Mid/Treble/Presence
+  tone stack driven by Gain and Master.
+
+### Done
+
+- `src/dsp/amp/AmpModule.{h,cpp}` — 4× oversampled preamp + tone stack + power
+  amp (nonlinear stages in the oversampled domain, tone stack between preamp and
+  power amp as in the real circuit), base-rate cabinet chain, oversampler latency
+  reported. Registered in `ModuleRegistry` + `CMakeLists` DSP sources.
+- Faceplate `ui/src/units/AmpUnit.ts` (3U): black-tolex face, gold Fender-style
+  control plate (Gain/Bass/Middle/Treble/Presence/Master), Clean/Crunch/Lead
+  channel tab, cabinet selector with a **live speaker diagram** (1/2/4 cones),
+  grille-cloth-backed output VU, illuminated POWER rocker. Wired into
+  `RackFrame`, the module browser (`juce.ts`), `previewSchema`, and the `?demo`
+  rack.
+- `docs/modules/amp.md`.
+
+### Verified
+
+- `tests/AmpTests.cpp` (5 cases, all green): preamp harmonic generation rises
+  Clean < Crunch < Lead; treble/bass controls move their bands; each cab
+  band-limits the top (1x12 > 2x12 > 4x12 HF energy); output finite + bounded at
+  extremes; latency > 0. Full suite: **34 954 assertions across 49 cases pass.**
+- Clean build (warnings-as-errors) of Standalone + VST3 + AU on macOS.
+- Faceplate reviewed via headless `?demo` screenshots at multiple widths (fits
+  the rack row, POWER rocker not clipped).
+
+### Uncertain / future
+
+- Tone stack is a shelf/peak approximation; a full interacting WDF network
+  (Yeh & Smith 2006) would add the inherent mid scoop.
+- Switching cab type re-derives filter coefficients at block rate without a
+  crossfade; a discrete "swap" is expected to be an audible change, but a short
+  crossfade could be added if clicks are reported.
+
 ## 2026-08-18 (M8c) — user manual · M8 complete
 
 Final slice of M8 (Ship). **All milestones M0–M8 are now done.**

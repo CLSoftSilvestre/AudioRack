@@ -14,6 +14,7 @@ import { LimiterUnit } from "../units/LimiterUnit";
 import { GateUnit } from "../units/GateUnit";
 import { EqUnit } from "../units/EqUnit";
 import { SaturatorUnit } from "../units/SaturatorUnit";
+import { AmpUnit } from "../units/AmpUnit";
 import { DelayUnit } from "../units/DelayUnit";
 import { ReverbUnit } from "../units/ReverbUnit";
 import { MAX_SLOTS, slotParamID } from "../bridge/protocol";
@@ -33,6 +34,7 @@ const UNIT_FACTORY: Record<string, new (store: Store, slot: number) => UnitInsta
   gate: GateUnit,
   eq: EqUnit,
   sat: SaturatorUnit,
+  amp: AmpUnit,
   delay: DelayUnit,
   reverb: ReverbUnit,
 };

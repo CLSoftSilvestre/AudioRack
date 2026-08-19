@@ -4,6 +4,7 @@ set(AUDIORACK_TEST_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/RackEngineTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DynamicsTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TimeToneTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/AmpTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SessionRecoveryTests.cpp)
 
 # SessionRecovery lives in src/state (outside AUDIORACK_CORE_SOURCES, which the

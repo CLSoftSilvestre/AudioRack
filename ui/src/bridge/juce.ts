@@ -84,7 +84,7 @@ class MockBridge implements Bridge {
   // "?full" mounts every slot (frame-budget benchmark); "?demo" mounts one
   // of each module type (visual review).
   private slots: string[] = window.location.search.includes("demo")
-    ? ["comp", "eq", "sat", "delay", "reverb", "lim", ...Array.from({ length: MAX_SLOTS - 6 }, () => "")]
+    ? ["comp", "amp", "eq", "sat", "delay", "reverb", "lim", ...Array.from({ length: MAX_SLOTS - 7 }, () => "")]
     : Array.from({ length: MAX_SLOTS }, (_, i) =>
         window.location.search.includes("full") || i === 0 ? "gain" : "",
       );
@@ -244,6 +244,7 @@ class MockBridge implements Bridge {
         { id: "gate", name: "Gate", category: "Dynamics", units: 1 },
         { id: "eq", name: "Parametric EQ", category: "EQ", units: 3 },
         { id: "sat", name: "Saturator", category: "Tone", units: 1 },
+        { id: "amp", name: "Guitar Amp", category: "Amp", units: 3 },
         { id: "delay", name: "Delay", category: "Time", units: 2 },
         { id: "reverb", name: "Reverb", category: "Time", units: 3 },
         { id: "lim", name: "Limiter", category: "Dynamics", units: 1 },

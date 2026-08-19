@@ -64,7 +64,8 @@ set(AUDIORACK_DSP_SOURCES
     ${CMAKE_SOURCE_DIR}/src/dsp/eq/EqModule.cpp
     ${CMAKE_SOURCE_DIR}/src/dsp/delay/DelayModule.cpp
     ${CMAKE_SOURCE_DIR}/src/dsp/reverb/ReverbModule.cpp
-    ${CMAKE_SOURCE_DIR}/src/dsp/saturator/SaturatorModule.cpp)
+    ${CMAKE_SOURCE_DIR}/src/dsp/saturator/SaturatorModule.cpp
+    ${CMAKE_SOURCE_DIR}/src/dsp/amp/AmpModule.cpp)
 
 if(AUDIORACK_BUILD_PLUGIN)
     add_subdirectory(src)
