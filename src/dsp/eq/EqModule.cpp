@@ -51,6 +51,7 @@ void EqModule::prepare (double sampleRate, int, int)
 {
     fs = sampleRate;
     trimGain.reset (fs, 0.02);
+    analyser.prepare (fs);
 
     for (auto& band : bands)
         band.cachedType = -1.0f;    // force refresh
@@ -60,6 +61,8 @@ void EqModule::prepare (double sampleRate, int, int)
 
 void EqModule::reset()
 {
+    analyser.reset();
+
     for (auto& band : bands)
         for (auto& f : band.filter)
             f.reset();
@@ -175,6 +178,11 @@ void EqModule::process (juce::dsp::AudioBlock<float>& block, const ProcessContex
             }
         }
     }
+
+    // RTA tap: the EQ's own output. The engine's wet/dry crossfade happens
+    // after this, so the display shows the curve's effect at full wet even
+    // while the slot is blended back.
+    analyser.push (block);
 
     meterPeakL.store (peak[0], std::memory_order_relaxed);
     meterPeakR.store (peak[1], std::memory_order_relaxed);

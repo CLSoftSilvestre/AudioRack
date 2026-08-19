@@ -5,7 +5,7 @@
 
 import type { Bridge } from "./bridge/juce";
 import type { MeterFrameData } from "./types";
-import { MAX_SLOTS, type ModuleInfo, type UiEvent } from "./bridge/protocol";
+import { MAX_SLOTS, SPECTRUM_BANDS, type ModuleInfo, type UiEvent } from "./bridge/protocol";
 
 type AbListener = (bank: number) => void;
 type MidiListener = () => void;
@@ -18,6 +18,8 @@ export interface ParamState {
 type ParamListener = (p: ParamState) => void;
 type RackListener = (slots: string[], modules: ModuleInfo[]) => void;
 type MeterListener = (frame: MeterFrameData) => void;
+/** Bands in dBFS. The array is reused between frames — read it, don't retain it. */
+type SpectrumListener = (db: Float32Array) => void;
 
 export class Store {
   private params = new Map<string, ParamState>();
@@ -29,6 +31,11 @@ export class Store {
   private rackListeners = new Set<RackListener>();
 
   private meterListeners = new Map<number, Set<MeterListener>>();
+
+  private spectrumListeners = new Map<number, Set<SpectrumListener>>();
+  // One reused buffer per slot: the analyser runs at 30 Hz forever, so
+  // allocating a fresh array per frame would be pure GC pressure.
+  private spectra = new Map<number, Float32Array>();
 
   private bank = 0;
   private abListeners = new Set<AbListener>();
@@ -58,6 +65,20 @@ export class Store {
         this.meterListeners
           .get(slot)
           ?.forEach((fn) => fn({ peakL, peakR, rmsL, rmsR, grDb }));
+      }
+    });
+
+    bridge.onSpectrum((msg) => {
+      for (const entry of msg.s) {
+        const slot = entry[0];
+        const listeners = this.spectrumListeners.get(slot);
+        if (!listeners || listeners.size === 0) continue;
+
+        let db = this.spectra.get(slot);
+        if (!db) this.spectra.set(slot, (db = new Float32Array(SPECTRUM_BANDS)));
+        for (let b = 0; b < SPECTRUM_BANDS; b++) db[b] = entry[b + 1] / 2; // half-dB wire units
+
+        listeners.forEach((fn) => fn(db!));
       }
     });
 
@@ -144,6 +165,17 @@ export class Store {
     if (!set) this.meterListeners.set(slot, (set = new Set()));
     set.add(fn);
     return () => set.delete(fn);
+  }
+
+  /** Subscribe to a slot's analyser bands (only modules with an RTA emit). */
+  onSpectrum(slot: number, fn: SpectrumListener): () => void {
+    let set = this.spectrumListeners.get(slot);
+    if (!set) this.spectrumListeners.set(slot, (set = new Set()));
+    set.add(fn);
+    return () => {
+      set.delete(fn);
+      if (set.size === 0) this.spectra.delete(slot);
+    };
   }
 
   onAb(fn: AbListener): () => void {

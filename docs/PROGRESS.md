@@ -1,5 +1,80 @@
 # Progress
 
+## 2026-08-19 — Real-time analyser (shared) + EQ-6 RTA
+
+EQ-6 now draws a live spectrum of its own output behind the response curve. The
+analyser is built as a **shared component**, not EQ-private code, so the §5
+Meter/Analyzer module becomes a faceplate over DSP that already exists and is
+already tested. See `docs/adr/0009-realtime-analyser.md`.
+
+### Design decisions (confirmed with the user)
+
+- **Shared analyser + EQ overlay**, rather than an EQ-only FFT or building the
+  full Meter/Analyzer module first. The expensive part was never the faceplate;
+  it was the analyser DSP plus a transport for ~96 bands per module, since
+  `MeterFrame` is five floats and cannot carry a spectrum.
+- **Post-EQ tap.** The RTA shows what the EQ is putting out, so the curve and
+  the spectrum describe the same signal. A PRE/POST switch was considered and
+  deferred — it needs a parameter and a second analyser instance.
+
+### Done
+
+- `src/dsp/common/SpectrumAnalyser.h` — 4096-point Hann periodogram, 96
+  geometric bands (20 Hz–22 kHz), fast-attack/slow-release ballistics,
+  calibrated so a full-scale sine reads 0 dBFS. Audio thread only mono-sums
+  into a lock-free ring; the FFT runs on the message thread.
+- `SpectrumFrame` in `core/CoreTypes.h`; optional `AudioModule::readSpectrum()`
+  (message thread) alongside the realtime `getMeterFrame()`.
+- `EqModule` taps its own output into the analyser and implements
+  `readSpectrum()`.
+- `RackWebView::pumpSpectra()` — new `ar_spectrum` event at 30 Hz, on the timer
+  tick opposite the parameter flush, bands sent as rounded half-dB integers.
+- UI: `SpectrumMessage` + band-layout constants in `protocol.ts`,
+  `Bridge.onSpectrum`, `Store.onSpectrum(slot)` with a reused `Float32Array`
+  per slot, and `EqCurve` drawing the RTA under a cached grid/curve layer.
+- `EqCurve` moved off its own `requestAnimationFrame` onto the shared
+  `animator`, which is both the documented house rule and what makes the widget
+  visible to the frame-budget bench.
+- Mock bridge synthesises a pink-tilted spectrum with wandering resonances so
+  `npm run dev` develops the widget against realistic motion; new `?eqfull`
+  layout mounts twelve EQs for the analyser's worst case.
+- `docs/modules/eq.md` updated; ADR 0009 written.
+
+### Verified
+
+- `tests/SpectrumTests.cpp` (8 cases): 0 dBFS calibration, level-tracks-dB,
+  two-tone band separation, decay-not-freeze when the transport stops, silence
+  at the floor, no spectrum before `prepare()`, the default `AudioModule` opting
+  out, and — the point of the exercise — a −18 dB notch showing up in EQ-6's
+  spectrum, which proves the tap is post-filter. Full suite: **35 075 assertions
+  across 57 cases pass.**
+- Clean build (warnings-as-errors) of Standalone + VST3 + AU on macOS.
+- Native cost, measured by `audiorack_bench` on this machine (Release, 512
+  samples @ 48 kHz): `push()` on the audio thread **0.48 µs p50 / 0.84 µs p95**
+  = 0.01 % of the block budget; `render()` on the message thread **21.9 µs p50 /
+  37.1 µs p95**, which at twelve slots and 30 Hz is **1.33 % of one core**.
+- UI frame budget, measured over CDP with real timing (the existing
+  `?full&bench` path reports zeros under headless Chrome's virtual time, so
+  `runBench()` is now exposed as `window.__arBench()` for a driver to call):
+  baseline `?full` p50 0.10 ms / p95 0.20 ms / p99 0.70 ms; `?eqfull` — twelve
+  live RTAs — p50 **0.40 ms** / p95 **0.70 ms** / p99 **1.20 ms**, against the
+  4 ms budget. The `?eqfull` figure is conservative: the mock bridge's spectrum
+  synthesis (96 bands x 12 slots of `pow`/`log2`/`random` per tick) costs more
+  than the native path, which just halves integers.
+
+### Uncertain / future
+
+- The low bands are coarser than they look: below ~450 Hz at 48 kHz each band is
+  narrower than one FFT bin, so several adjacent bands interpolate the same pair
+  of bins. Correct, but a larger FFT or a multi-resolution transform would give
+  real detail down there.
+- Release ballistics are a fixed per-call coefficient tuned for a 30 Hz render.
+  If the editor's poll rate ever changes, the fall time changes with it; a
+  time-based coefficient would decouple them.
+- No RTA on/off control. Adding one means a host-automatable parameter, which
+  is a heavy way to persist a display preference — worth revisiting alongside
+  the Meter/Analyzer module.
+
 ## 2026-08-19 — Guitar Amp module (AMP-1)
 
 New rack module: a guitar amplifier with cascaded tube preamp, passive-style

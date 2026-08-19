@@ -1,7 +1,7 @@
 /** EQ-6 "Parametric EQ" — 3U, graphite face. A tall live response curve on the
- *  left; the six band strips (type selector + freq/gain/Q knobs + on) sit to its
- *  right at full height so every control fits; output trim + bypass on the far
- *  right.
+ *  left, over a real-time analyser of the module's own output; the six band
+ *  strips (type selector + freq/gain/Q knobs + on) sit to its right at full
+ *  height so every control fits; output trim + bypass on the far right.
  */
 
 import { EqCurve, type EqBandValues } from "../widgets/EqCurve";
@@ -46,6 +46,7 @@ export class EqUnit {
         active ? this.store.beginGesture(p) : this.store.endGesture(p);
       },
     );
+    this.unsubs.push(this.store.onSpectrum(slot, (db) => this.curve.setSpectrum(db)));
     top.appendChild(this.curve.el);
     face.appendChild(top);
 
@@ -107,6 +108,7 @@ export class EqUnit {
 
   dispose(): void {
     this.unsubs.forEach((fn) => fn());
+    this.curve.dispose();
   }
 }
 

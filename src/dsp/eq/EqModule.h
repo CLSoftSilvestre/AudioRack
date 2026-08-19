@@ -2,6 +2,7 @@
 
 #include "../../core/ModuleRegistry.h"
 #include "../common/Biquad.h"
+#include "../common/SpectrumAnalyser.h"
 
 #include <array>
 #include <atomic>
@@ -11,7 +12,9 @@ namespace audiorack
 
 /** EQ-6 — six-band parametric EQ (RBJ biquads): bell, low/high shelf,
     high-pass, low-pass per band, per-band enable and solo, output trim.
-    The UI draws the live magnitude response from the same RBJ formulas.
+    The UI draws the live magnitude response from the same RBJ formulas, over a
+    real-time analyser fed from the module's own output (post-EQ, pre wet/dry),
+    so the curve and the spectrum always describe the same signal.
     See docs/modules/eq.md.
 */
 class EqModule final : public AudioModule
@@ -31,6 +34,7 @@ public:
 
     void process (juce::dsp::AudioBlock<float>& block, const ProcessContext&) noexcept override;
     void getMeterFrame (MeterFrame&) const noexcept override;
+    bool readSpectrum (SpectrumFrame& out) noexcept override { return analyser.render (out); }
 
 private:
     void refreshBand (int band) noexcept;
@@ -59,6 +63,8 @@ private:
 
     double fs = 44100.0;
     juce::SmoothedValue<float> trimGain;
+
+    dsp::SpectrumAnalyser analyser;   // post-EQ RTA; the FFT runs on the message thread
 
     std::atomic<float> meterPeakL { 0.0f }, meterPeakR { 0.0f };
     std::atomic<float> meterRmsL { 0.0f }, meterRmsR { 0.0f };

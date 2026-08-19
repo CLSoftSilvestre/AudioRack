@@ -4,6 +4,17 @@
 
 export const MAX_SLOTS = 12;
 
+/** Analyser band layout — mirror of src/core/CoreTypes.h. Bands are spaced
+ *  geometrically from SPECTRUM_MIN_HZ to SPECTRUM_MAX_HZ. */
+export const SPECTRUM_BANDS = 96;
+export const SPECTRUM_MIN_HZ = 20;
+export const SPECTRUM_MAX_HZ = 22000;
+export const SPECTRUM_FLOOR_DB = -100;
+
+/** Centre frequency of analyser band `b` (band edges are b and b+1). */
+export const spectrumBandHz = (b: number): number =>
+  SPECTRUM_MIN_HZ * Math.pow(SPECTRUM_MAX_HZ / SPECTRUM_MIN_HZ, (b + 0.5) / SPECTRUM_BANDS);
+
 /** Module type metadata, as registered in the native ModuleRegistry. */
 export interface ModuleInfo {
   id: string;
@@ -27,6 +38,13 @@ export interface ParamsMessage {
 /** native -> web: "ar_meters" — batch of [slot, peakL, peakR, rmsL, rmsR, grDb] */
 export interface MetersMessage {
   m: [number, number, number, number, number, number][];
+}
+
+/** native -> web: "ar_spectrum" — one entry per module that publishes an RTA:
+ *  [slot, ...bands], where each band is dBFS x 2 rounded to an integer (half-dB
+ *  steps, finer than a display pixel, ~a third of the JSON of raw floats). */
+export interface SpectrumMessage {
+  s: number[][];
 }
 
 /** native -> web: "ar_ab" — which parameter bank (A=0 / B=1) is live. */

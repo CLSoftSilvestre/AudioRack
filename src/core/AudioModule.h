@@ -17,6 +17,9 @@ namespace audiorack
         fully prepared modules and unmounts before destruction).
       - process(), latencySamples() and getMeterFrame() must be realtime-safe:
         no allocation, locks, strings, logging or exceptions.
+      - readSpectrum() runs on the message thread, concurrently with process().
+        It is the analyser's consumer side, so it may do real work (an FFT);
+        the audio thread only ever fills a lock-free ring.
 
     Parameters are declared once, statically, by declareParameters(); each
     concrete module also implements it (found via ModuleRegistry, not virtual).
@@ -44,6 +47,12 @@ public:
 
     virtual int  latencySamples() const noexcept { return 0; }
     virtual void getMeterFrame (MeterFrame&) const noexcept {}
+
+    // Message thread — polled at UI rate by the editor.
+
+    /// Fills `out` with this module's analyser bands. Returns false for modules
+    /// that publish no spectrum (the default), so the editor sends nothing.
+    virtual bool readSpectrum (SpectrumFrame&) noexcept { return false; }
 };
 
 } // namespace audiorack
