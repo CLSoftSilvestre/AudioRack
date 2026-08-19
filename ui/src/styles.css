@@ -884,6 +884,12 @@ body.dragging * {
   border-left: 1px solid rgba(226, 224, 216, 0.14);
 }
 
+/* GT-1 has no meter section to fill the row, so pin POWER to the far right
+   like the other units. */
+.unit-gate .unit-bypass-well {
+  margin-left: auto;
+}
+
 /* ============================ M6 UNIT LAYOUTS ============================ */
 
 /* --- Selector widget --- */
