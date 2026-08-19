@@ -36,7 +36,7 @@ void EqModule::declareParameters (ParameterBuilder& b)
         const auto bandName = "Band " + juce::String (i + 1) + " ";
 
         b.add ({ "b" + n + "type", bandName + "Type", { 0.0f, 4.0f, 1.0f }, 0.0f, "",
-                 { "Bell", "Low Shelf", "High Shelf", "High Pass", "Low Pass" } });
+                 { "Bell", "Lo Shelf", "Hi Shelf", "HPF", "LPF" } });
         b.add ({ "b" + n + "freq", bandName + "Freq", freqRange, defaults[i], "Hz" });
         b.add ({ "b" + n + "gain", bandName + "Gain", { -18.0f, 18.0f, 0.1f }, 0.0f, "dB" });
         b.add ({ "b" + n + "q",    bandName + "Q",    qRange, 0.71f, "" });
@@ -51,6 +51,7 @@ void EqModule::prepare (double sampleRate, int, int)
 {
     fs = sampleRate;
     trimGain.reset (fs, 0.02);
+    analyser.prepare (fs);
 
     for (auto& band : bands)
         band.cachedType = -1.0f;    // force refresh
@@ -60,6 +61,8 @@ void EqModule::prepare (double sampleRate, int, int)
 
 void EqModule::reset()
 {
+    analyser.reset();
+
     for (auto& band : bands)
         for (auto& f : band.filter)
             f.reset();
@@ -175,6 +178,11 @@ void EqModule::process (juce::dsp::AudioBlock<float>& block, const ProcessContex
             }
         }
     }
+
+    // RTA tap: the EQ's own output. The engine's wet/dry crossfade happens
+    // after this, so the display shows the curve's effect at full wet even
+    // while the slot is blended back.
+    analyser.push (block);
 
     meterPeakL.store (peak[0], std::memory_order_relaxed);
     meterPeakR.store (peak[1], std::memory_order_relaxed);

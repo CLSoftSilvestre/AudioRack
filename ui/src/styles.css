@@ -580,7 +580,7 @@ body.dragging * {
 }
 
 .unit.bypassed .unit-face {
-  filter: saturate(0.75) brightness(0.94);
+  filter: saturate(0.5) brightness(0.8);
 }
 
 .unit-section {
@@ -635,6 +635,15 @@ body.dragging * {
 .unit-meter-well {
   position: relative;
   flex: 1;
+}
+
+/* GN-1: LEVEL sits clear above the LED ladder (no VU meter on this unit). */
+.unit-gain .silkscreen {
+  top: 2px;
+}
+
+.unit-gain .unit-meter-well .ladder {
+  margin-top: 10px;
 }
 
 .unit-bypass-well {
@@ -723,6 +732,7 @@ body.dragging * {
 
 .dark-face .knob-label,
 .dark-face .switch-label,
+.dark-face .rocker-label,
 .dark-face .fader-label,
 .dark-face .display-label,
 .dark-face .silkscreen,
@@ -874,6 +884,12 @@ body.dragging * {
   border-left: 1px solid rgba(226, 224, 216, 0.14);
 }
 
+/* GT-1 has no meter section to fill the row, so pin POWER to the far right
+   like the other units. */
+.unit-gate .unit-bypass-well {
+  margin-left: auto;
+}
+
 /* ============================ M6 UNIT LAYOUTS ============================ */
 
 /* --- Selector widget --- */
@@ -971,6 +987,24 @@ body.dragging * {
   border-top: 2px solid var(--band-color, #888);
 }
 
+/* Lock every band's type LCD to the strip width so switching Bell -> Lo Shelf
+   never reflows the strips; long labels truncate with an ellipsis instead. */
+.unit-eq .eq-strip .selector {
+  width: 100%;
+}
+.unit-eq .eq-strip .selector-window {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.unit-eq .eq-strip .selector-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .eq-rail {
   position: absolute;
   /* centred in the free space between the band-6 strip and the right rack edge,
@@ -998,18 +1032,104 @@ body.dragging * {
   border-left: 1px solid rgba(58, 47, 30, 0.2); border-right: 1px solid rgba(58, 47, 30, 0.2); }
 .sat-meter { flex: 1; }
 
-/* --- Delay layout --- */
-.delay-time { gap: 10px; padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
-.delay-knobs { gap: 6px; padding: 0 10px; }
-.delay-switches { flex-direction: column; gap: 6px; padding: 0 8px;
+/* --- Delay layout ---
+   The delay packs six sections; tightened gaps + a slimmer stereo ladder keep
+   the whole face inside the rack width so the bypass/right ear never overflow. */
+.unit-delay .unit-face { gap: 9px; }
+.delay-time { gap: 6px; padding-right: 8px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
+.delay-knobs { gap: 4px; padding: 0 6px; }
+.delay-switches { flex-direction: column; gap: 6px; padding: 0 6px;
   border-left: 1px solid rgba(226, 224, 216, 0.14); border-right: 1px solid rgba(226, 224, 216, 0.14); }
-.delay-meter { flex: 1; }
+.delay-meter { flex: 1; min-width: 0; }
+/* Slimmer LED ladder just for the delay (its section is the widest). */
+.unit-delay .ladder { padding: 8px 8px 12px; }
+.unit-delay .ladder-row { gap: 2px; }
+.unit-delay .ladder-seg { width: 10px; height: 8px; }
 
-/* --- Reverb layout --- */
-.reverb-knobs { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 10px;
-  align-content: center; padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
+/* --- Reverb layout ---
+   2U, no VU: the six knobs sit in one row and take the freed width, with the
+   decay display + FREEZE closing the face before the bypass well. */
+.unit-reverb .unit-face { gap: 10px; }
+.reverb-knobs { flex: 1; gap: 2px; justify-content: space-evenly; min-width: 0;
+  padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
 .reverb-center { flex-direction: column; gap: 8px; padding: 0 12px; }
-.reverb-meter { flex: 1; }
+
+/* ============================== GUITAR AMP (3U) ============================== */
+
+/* Black tolex head: coarse vinyl grain over a near-black field. */
+.unit-amp .unit-face {
+  gap: 12px;
+  background:
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="90" height="90"><filter id="t"><feTurbulence type="fractalNoise" baseFrequency="0.18 0.32" numOctaves="2"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0.09"/></feComponentTransfer></filter><rect width="90" height="90" filter="url(%23t)"/></svg>'),
+    linear-gradient(180deg, #201f1e 0%, #191817 40%, #131211 78%, #0d0c0b 100%);
+}
+.unit-amp .unit-ear { background: linear-gradient(90deg, #141312 0%, #26241f 40%, #141312 100%); }
+.unit-amp .unit-ear.right { background: linear-gradient(270deg, #141312 0%, #26241f 40%, #141312 100%); }
+
+.amp-channel { padding-right: 2px; }
+
+/* Gold Fender-style control plate carrying the knobs, with dark silkscreen. */
+.amp-knobs {
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0.05) 1px 2px),
+    linear-gradient(180deg, #e8cf8f 0%, #d4b46a 38%, #c2a054 70%, #a8863f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.amp-knobs .knob-label { color: #2c2110; }
+.amp-knobs .tick-major { stroke: rgba(44, 33, 16, 0.8); }
+.amp-knobs .tick-minor { stroke: rgba(44, 33, 16, 0.4); }
+.amp-knobs .tick-text { fill: rgba(44, 33, 16, 0.7); }
+
+/* Cabinet: selector plus a live speaker diagram (1 / 2 / 4 cones). */
+.amp-cab { flex-direction: column; gap: 5px; padding: 0 4px; }
+.amp-speakers {
+  display: grid;
+  gap: 4px;
+  width: 38px;
+  height: 38px;
+  padding: 4px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #1b1a18 0%, #0e0d0c 100%);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  place-items: center;
+}
+.amp-speakers .spk {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 42%, #4a4640 0%, #2a2723 45%, #141210 72%, #0a0908 100%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.12), inset 0 -2px 3px rgba(0, 0, 0, 0.7);
+}
+/* Layouts per cab: 1x12 = one big centred cone, 2x12 = a vertical pair,
+   4x12 = the classic 2x2 stack. */
+.amp-speakers[data-cab="1x12"] { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.amp-speakers[data-cab="1x12"] .spk:nth-child(n+2) { display: none; }
+.amp-speakers[data-cab="2x12"] { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+.amp-speakers[data-cab="2x12"] .spk:nth-child(n+3) { display: none; }
+
+/* Grille cloth panel behind the output VU. */
+.amp-grille {
+  flex: 1;
+  min-width: 0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.32) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.32) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, #6a5a3c 0%, #52462f 50%, #3c3222 100%);
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
 
 /* ============================== GR LADDER ============================== */
 
@@ -1271,11 +1391,11 @@ body.dragging * {
 
 .vu-tick {
   stroke: #4a4030;
-  stroke-width: 1.4;
+  stroke-width: 0.9;
 }
 
 .vu-tick.minor {
-  stroke-width: 0.7;
+  stroke-width: 0.45;
   opacity: 0.55;
 }
 
@@ -1286,7 +1406,7 @@ body.dragging * {
 }
 
 .vu-text {
-  font-size: 9px;
+  font-size: 6px;
   font-weight: 700;
   fill: #4a4030;
 }
@@ -1294,11 +1414,11 @@ body.dragging * {
 .vu-red-arc {
   fill: none;
   stroke: #c02c22;
-  stroke-width: 3;
+  stroke-width: 2;
 }
 
 .vu-brand {
-  font-size: 13px;
+  font-size: 8.5px;
   font-weight: 800;
   letter-spacing: 0.1em;
   fill: rgba(74, 64, 48, 0.9);
@@ -1307,9 +1427,12 @@ body.dragging * {
 .vu-needle {
   position: absolute;
   left: calc(50% - 1px);
-  bottom: -42px;               /* pivot below the visible face */
+  /* Pivot 4px below the visible face, hidden behind the bezel, matching the
+     scale's (cx, cy) = (74, 76) in VuMeter.faceSvg(). The length reaches the
+     inner end of the major ticks (rOuter - 9 = 58px). */
+  bottom: -4px;
   width: 2px;
-  height: 104px;
+  height: 58px;
   transform-origin: 50% 100%;
   background: linear-gradient(180deg, #26211a 0%, #3a332a 100%);
   box-shadow: 1px 0 1.5px rgba(60, 40, 10, 0.4);
@@ -1319,7 +1442,7 @@ body.dragging * {
 .vu-pivot {
   position: absolute;
   left: 50%;
-  bottom: -10px;
+  bottom: -17px;               /* centres the hub on the needle pivot */
   width: 26px;
   height: 26px;
   transform: translateX(-50%);
@@ -1523,6 +1646,142 @@ body.dragging * {
   box-shadow:
     0 0 7px rgba(70, 224, 92, 0.85),
     0 0 14px rgba(70, 224, 92, 0.4);
+}
+
+/* ===================== ILLUMINATED ROCKER (unit power) ===================== */
+
+.rocker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Black cross-hatched bezel the lens is recessed into. */
+.rocker-bezel {
+  position: relative;
+  width: 34px;
+  height: 46px;
+  padding: 4px;
+  border-radius: 7px;
+  perspective: 130px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.4) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, #33353a 0%, #202225 45%, #131417 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 2px 3px rgba(0, 0, 0, 0.55);
+}
+
+/* Red lens; rocks on its X axis to show which side is pressed.
+ *
+ *  Only `transform` (the mechanical throw) is transitioned. The illumination
+ *  lives on the ::before overlay and fades via opacity, which the compositor
+ *  handles without repainting — animating background/box-shadow here made the
+ *  blurred glow repaint and flash neighbouring rockers on every toggle. */
+.rocker-face {
+  position: absolute;
+  inset: 4px;
+  border-radius: 4px;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transform: rotateX(-18deg); /* OFF: "O" (bottom) pressed in, "I" raised */
+  transform-origin: 50% 50%;
+  transition: transform 0.13s cubic-bezier(0.2, 0.75, 0.3, 1);
+  background: linear-gradient(180deg, #6e1a1f 0%, #4a1116 46%, #300a0e 100%);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.62),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Lit overlay: bright red lens + outer glow, faded in with opacity only. */
+.rocker-face::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #ff6b60 0%, #ee242c 42%, #b0141b 100%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 190, 180, 0.55),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(120, 12, 16, 0.6),
+    0 0 9px rgba(240, 42, 46, 0.75),
+    0 0 20px rgba(240, 42, 46, 0.45);
+  opacity: 0;
+  transition: opacity 0.13s ease;
+  pointer-events: none;
+}
+
+.rocker.on .rocker-face {
+  transform: rotateX(18deg); /* ON: "I" (top) pressed in */
+}
+
+.rocker.on .rocker-face::before {
+  opacity: 1;
+}
+
+/* Soft specular sheen across the upper curve of the lens. */
+.rocker-gloss {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  right: 3px;
+  height: 46%;
+  border-radius: 3px 3px 60% 60% / 3px 3px 90% 90%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.04));
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.rocker.on .rocker-gloss {
+  opacity: 0.8;
+}
+
+.rocker-glyph {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.rocker.on .rocker-glyph {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 2px rgba(90, 0, 0, 0.6);
+}
+
+.rocker-glyph.top {
+  top: 5px;
+  font-size: 14px;
+}
+
+.rocker-glyph.bottom {
+  bottom: 5px;
+  font-size: 11px;
+}
+
+.rocker-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(53, 50, 44, 0.85);
+}
+
+.rocker:focus-visible .rocker-bezel {
+  box-shadow:
+    inset 0 -2px 3px rgba(0, 0, 0, 0.7),
+    0 0 0 2px rgba(120, 170, 255, 0.75);
 }
 
 /* ================================ FADER ================================ */

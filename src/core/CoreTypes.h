@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 namespace audiorack
 {
 
@@ -36,6 +38,20 @@ struct MeterFrame
     float peakL = 0.0f, peakR = 0.0f;
     float rmsL  = 0.0f, rmsR  = 0.0f;
     float gainReductionDb = 0.0f;
+};
+
+/// Real-time analyser output: one log-spaced magnitude band set, in dBFS.
+/// Bands run from kSpectrumMinHz to kSpectrumMaxHz, geometrically spaced, so
+/// band b covers [min*(max/min)^(b/N), min*(max/min)^((b+1)/N)). The UI mirrors
+/// these constants in ui/src/bridge/protocol.ts — change them together.
+inline constexpr int   kSpectrumBands   = 96;
+inline constexpr float kSpectrumMinHz   = 20.0f;
+inline constexpr float kSpectrumMaxHz   = 22000.0f;
+inline constexpr float kSpectrumFloorDb = -100.0f;
+
+struct SpectrumFrame
+{
+    std::array<float, kSpectrumBands> db {};
 };
 
 /// Everything a module receives per block besides the audio itself.

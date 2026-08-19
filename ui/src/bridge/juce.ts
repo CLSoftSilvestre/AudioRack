@@ -9,9 +9,10 @@ import type {
   MidiMessage,
   ParamsMessage,
   RackMessage,
+  SpectrumMessage,
   UiEvent,
 } from "./protocol";
-import { MAX_SLOTS } from "./protocol";
+import { MAX_SLOTS, SPECTRUM_BANDS, SPECTRUM_FLOOR_DB, spectrumBandHz } from "./protocol";
 import { PREVIEW_SCHEMA } from "./previewSchema";
 
 interface JuceBackend {
@@ -31,6 +32,7 @@ export interface Bridge {
   onRack(fn: (msg: RackMessage) => void): void;
   onParams(fn: (msg: ParamsMessage) => void): void;
   onMeters(fn: (msg: MetersMessage) => void): void;
+  onSpectrum(fn: (msg: SpectrumMessage) => void): void;
   onAb(fn: (msg: AbMessage) => void): void;
   onMidi(fn: (msg: MidiMessage) => void): void;
 }
@@ -52,6 +54,9 @@ class NativeBridge implements Bridge {
   onMeters(fn: (msg: MetersMessage) => void): void {
     this.backend.addEventListener("ar_meters", (p) => fn(p as MetersMessage));
   }
+  onSpectrum(fn: (msg: SpectrumMessage) => void): void {
+    this.backend.addEventListener("ar_spectrum", (p) => fn(p as SpectrumMessage));
+  }
   onAb(fn: (msg: AbMessage) => void): void {
     this.backend.addEventListener("ar_ab", (p) => fn(p as AbMessage));
   }
@@ -69,6 +74,7 @@ class MockBridge implements Bridge {
   private rackListeners: ((msg: RackMessage) => void)[] = [];
   private paramListeners: ((msg: ParamsMessage) => void)[] = [];
   private meterListeners: ((msg: MetersMessage) => void)[] = [];
+  private spectrumListeners: ((msg: SpectrumMessage) => void)[] = [];
   private abListeners: ((msg: AbMessage) => void)[] = [];
   private midiListeners: ((msg: MidiMessage) => void)[] = [];
 
@@ -81,20 +87,27 @@ class MockBridge implements Bridge {
   private midiMap = new Map<string, number>();
   private nextCc = 20;
 
-  // "?full" mounts every slot (frame-budget benchmark); "?demo" mounts one
-  // of each module type (visual review).
+  // "?full" mounts every slot (frame-budget benchmark); "?eqfull" fills the
+  // rack with EQ-6 instead, the analyser's worst case (12 live RTAs);
+  // "?demo" mounts one of each module type (visual review).
   private slots: string[] = window.location.search.includes("demo")
-    ? ["comp", "eq", "sat", "delay", "reverb", "lim", ...Array.from({ length: MAX_SLOTS - 6 }, () => "")]
-    : Array.from({ length: MAX_SLOTS }, (_, i) =>
-        window.location.search.includes("full") || i === 0 ? "gain" : "",
-      );
+    ? ["comp", "amp", "eq", "sat", "delay", "reverb", "lim", ...Array.from({ length: MAX_SLOTS - 7 }, () => "")]
+    : window.location.search.includes("eqfull")
+      ? Array.from({ length: MAX_SLOTS }, () => "eq")
+      : Array.from({ length: MAX_SLOTS }, (_, i) =>
+          window.location.search.includes("full") || i === 0 ? "gain" : "",
+        );
   private params = new Map<string, number>();
 
   constructor() {
     setInterval(() => this.tickMeters(), 1000 / 60);
-    // Benchmark hook: lets the frame-budget bench pump meter traffic
-    // synchronously (see main.ts, "?bench").
-    (window as unknown as Record<string, unknown>).__arPump = () => this.tickMeters();
+    setInterval(() => this.tickSpectrum(), 1000 / 30);
+    // Benchmark hook: lets the frame-budget bench pump meter and analyser
+    // traffic synchronously (see main.ts, "?bench").
+    (window as unknown as Record<string, unknown>).__arPump = () => {
+      this.tickMeters();
+      this.tickSpectrum();
+    };
   }
 
   send(event: UiEvent): void {
@@ -202,6 +215,9 @@ class MockBridge implements Bridge {
   onMeters(fn: (msg: MetersMessage) => void): void {
     this.meterListeners.push(fn);
   }
+  onSpectrum(fn: (msg: SpectrumMessage) => void): void {
+    this.spectrumListeners.push(fn);
+  }
   onAb(fn: (msg: AbMessage) => void): void {
     this.abListeners.push(fn);
   }
@@ -244,8 +260,9 @@ class MockBridge implements Bridge {
         { id: "gate", name: "Gate", category: "Dynamics", units: 1 },
         { id: "eq", name: "Parametric EQ", category: "EQ", units: 3 },
         { id: "sat", name: "Saturator", category: "Tone", units: 1 },
+        { id: "amp", name: "Guitar Amp", category: "Amp", units: 3 },
         { id: "delay", name: "Delay", category: "Time", units: 2 },
-        { id: "reverb", name: "Reverb", category: "Time", units: 3 },
+        { id: "reverb", name: "Reverb", category: "Time", units: 2 },
         { id: "lim", name: "Limiter", category: "Dynamics", units: 1 },
       ],
     };
@@ -267,6 +284,43 @@ class MockBridge implements Bridge {
       }
     }
     this.paramListeners.forEach((fn) => fn({ p }));
+  }
+
+  private spectrumPhase = 0;
+  private spectrumDb = new Float32Array(SPECTRUM_BANDS).fill(SPECTRUM_FLOOR_DB);
+
+  /** Browser preview: a pink-ish noise floor with a couple of wandering
+   *  resonances, run through the same fast-attack / slow-release ballistics as
+   *  the native analyser so the widget is developed against realistic motion.
+   */
+  private tickSpectrum(): void {
+    this.spectrumPhase += 1 / 30;
+    const s: number[][] = [];
+
+    for (let slot = 0; slot < MAX_SLOTS; slot++) {
+      if (this.slots[slot] !== "eq") continue;
+      const bypassed = this.value01(`slot${slot}.bypass`) >= 0.5;
+
+      const peak1 = 200 * Math.pow(4, 1 + Math.sin(this.spectrumPhase * 0.7));
+      const peak2 = 90 * Math.pow(3, 1 + Math.sin(this.spectrumPhase * 1.1 + 2));
+      const entry: number[] = [slot];
+
+      for (let b = 0; b < SPECTRUM_BANDS; b++) {
+        const hz = spectrumBandHz(b);
+        // -4.5 dB/octave tilt, the rough long-term slope of mixed music.
+        let db = -18 - 4.5 * Math.log2(hz / 100) + 4 * Math.random();
+        db += 22 / (1 + Math.pow((Math.log2(hz / peak1) * 3), 2));
+        db += 16 / (1 + Math.pow((Math.log2(hz / peak2) * 4), 2));
+        if (bypassed) db = SPECTRUM_FLOOR_DB;
+
+        const prev = this.spectrumDb[b];
+        this.spectrumDb[b] = db > prev ? db : prev + (db - prev) * 0.3;
+        entry.push(Math.round(Math.max(SPECTRUM_FLOOR_DB, this.spectrumDb[b]) * 2));
+      }
+      s.push(entry);
+    }
+
+    if (s.length > 0) this.spectrumListeners.forEach((fn) => fn({ s }));
   }
 
   private phase = 0;

@@ -1,11 +1,29 @@
-/** Live EQ magnitude-response display.
+/** Live EQ magnitude-response display with a real-time analyser behind it.
  *
  *  Computes |H(e^jω)| for each active band from the same RBJ biquad
  *  coefficients as the C++ (src/dsp/common/Biquad.h) and sums the log
- *  magnitudes. Draws on a canvas: dB grid, per-band coloured curves and the
- *  summed response, plus draggable band handles. Redrawn only when a band
- *  value changes (not per audio frame).
+ *  magnitudes: dB grid, per-band coloured curves and the summed response, plus
+ *  draggable band handles. Behind all of that sits the post-EQ spectrum fed by
+ *  the native analyser (src/dsp/common/SpectrumAnalyser.h) at ~30 Hz.
+ *
+ *  Two axes share the canvas: the response curve reads ±18 dB of *gain*, the
+ *  analyser reads 0..-72 dBFS of *level*. They are deliberately not the same
+ *  scale — the RTA is context for the curve, not a second copy of it — so the
+ *  analyser is drawn dim and unlabelled while the curve keeps the axis marks.
+ *
+ *  The grid and the band curves are cached in an offscreen layer and only
+ *  rebuilt when a band value changes; an analyser frame just blits that layer
+ *  over a freshly drawn spectrum. Painting is coalesced onto the shared
+ *  animator, so a burst of parameter messages still costs one paint and the
+ *  frame-budget bench measures this widget along with everything else.
  */
+
+import { addTick } from "../animator";
+import {
+  SPECTRUM_BANDS,
+  SPECTRUM_FLOOR_DB,
+  spectrumBandHz,
+} from "../bridge/protocol";
 
 export interface EqBandValues {
   type: number; // 0 bell, 1 low shelf, 2 high shelf, 3 HP, 4 LP
@@ -25,14 +43,24 @@ const MAX_HZ = 22000;
 const MIN_DB = -18;
 const MAX_DB = 18;
 
+// Analyser level axis, in dBFS.
+const RTA_TOP_DB = 0;
+const RTA_BOTTOM_DB = -72;
+
 const BAND_COLORS = ["#ff6b6b", "#ffa94d", "#ffd43b", "#69db7c", "#4dabf7", "#b197fc"];
 
 export class EqCurve {
   readonly el: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private layer: HTMLCanvasElement;
+  private layerCtx: CanvasRenderingContext2D;
+  private layerDirty = true;
+  private dirty = true;
+  private removeTick: () => void;
   private w = 0;
   private h = 0;
   private bands: EqBandValues[] = [];
+  private spectrum: Float32Array | null = null;
 
   /** onBandDrag(bandIndex, freqHz, gainDb) while dragging a handle. */
   constructor(
@@ -53,12 +81,40 @@ export class EqCurve {
     this.ctx = this.el.getContext("2d")!;
     this.ctx.scale(dpr, dpr);
 
+    this.layer = document.createElement("canvas");
+    this.layer.width = this.el.width;
+    this.layer.height = this.el.height;
+    this.layerCtx = this.layer.getContext("2d")!;
+    this.layerCtx.scale(dpr, dpr);
+
+    this.removeTick = addTick(() => {
+      if (!this.dirty) return;
+      this.dirty = false;
+      this.draw();
+    });
+
     if (onBandDrag) this.bindDrag();
   }
 
   setBands(bands: EqBandValues[]): void {
     this.bands = bands;
-    this.draw();
+    this.layerDirty = true;
+    this.schedule();
+  }
+
+  /** Analyser bands in dBFS. The caller reuses its buffer, so this copies. */
+  setSpectrum(db: Float32Array): void {
+    if (this.spectrum === null) this.spectrum = new Float32Array(SPECTRUM_BANDS);
+    this.spectrum.set(db);
+    this.schedule();
+  }
+
+  dispose(): void {
+    this.removeTick();
+  }
+
+  private schedule(): void {
+    this.dirty = true;
   }
 
   // --- geometry ------------------------------------------------------------------
@@ -72,6 +128,10 @@ export class EqCurve {
   }
   private yForDb(db: number): number {
     return this.h * (1 - (db - MIN_DB) / (MAX_DB - MIN_DB));
+  }
+  private yForLevelDb(db: number): number {
+    const t = (db - RTA_BOTTOM_DB) / (RTA_TOP_DB - RTA_BOTTOM_DB);
+    return this.h * (1 - Math.max(0, Math.min(1, t)));
   }
   private dbForY(y: number): number {
     return MIN_DB + (1 - y / this.h) * (MAX_DB - MIN_DB);
@@ -139,17 +199,62 @@ export class EqCurve {
 
   // --- drawing --------------------------------------------------------------------
 
+  /** One composited frame: background, analyser, then the cached curve layer. */
   private draw(): void {
     const { ctx, w, h } = this;
-    const fs = 48000;
-    ctx.clearRect(0, 0, w, h);
 
-    // Background.
     const bg = ctx.createLinearGradient(0, 0, 0, h);
     bg.addColorStop(0, "#0d1015");
     bg.addColorStop(1, "#070809");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
+
+    this.drawSpectrum();
+
+    if (this.layerDirty) {
+      this.drawLayer();
+      this.layerDirty = false;
+    }
+    ctx.drawImage(this.layer, 0, 0, w, h);
+  }
+
+  /** Analyser bars, drawn as one filled area so 96 bands cost one path. */
+  private drawSpectrum(): void {
+    const spec = this.spectrum;
+    if (spec === null) return;
+
+    const { ctx, w, h } = this;
+
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let b = 0; b < SPECTRUM_BANDS; b++) {
+      const db = spec[b];
+      const x = this.xForHz(spectrumBandHz(b));
+      // The floor sits below the visible axis, so silence rests on the baseline
+      // instead of drawing a hard line across the bottom of the display.
+      ctx.lineTo(x, this.yForLevelDb(db <= SPECTRUM_FLOOR_DB + 1 ? RTA_BOTTOM_DB : db));
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+
+    const fill = ctx.createLinearGradient(0, 0, 0, h);
+    fill.addColorStop(0, "rgba(130,185,240,0.20)");
+    fill.addColorStop(0.55, "rgba(85,140,205,0.10)");
+    fill.addColorStop(1, "rgba(55,100,165,0.03)");
+    ctx.fillStyle = fill;
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(150,200,245,0.32)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  /** Grid, band curves and handles — rebuilt only when a band value changes. */
+  private drawLayer(): void {
+    const { w, h } = this;
+    const ctx = this.layerCtx;
+    const fs = 48000;
+    ctx.clearRect(0, 0, w, h);
 
     // dB grid.
     ctx.strokeStyle = "rgba(120,140,160,0.12)";

@@ -8,6 +8,7 @@
 #include "../dsp/delay/DelayModule.h"
 #include "../dsp/reverb/ReverbModule.h"
 #include "../dsp/saturator/SaturatorModule.h"
+#include "../dsp/amp/AmpModule.h"
 
 namespace audiorack
 {
@@ -51,6 +52,7 @@ void registerBuiltinModules()
     registry.add (GateModule::typeInfo());
     registry.add (EqModule::typeInfo());
     registry.add (SaturatorModule::typeInfo());
+    registry.add (AmpModule::typeInfo());
     registry.add (DelayModule::typeInfo());
     registry.add (ReverbModule::typeInfo());
     registry.add (LimiterModule::typeInfo());

@@ -37,7 +37,13 @@ export class VuMeter {
     this.el.className = "vu";
     this.el.setAttribute("role", "meter");
     this.el.setAttribute("aria-label", `${label} meter`);
-    if (mode === "gr") this.position = 1; // GR needle rests at 0 (right)
+    // GR needle rests at 0 dB of reduction (right-hand end): both the current
+    // position and the target must start there, or the ballistics drag it to
+    // full reduction on the first tick and leave it there until audio arrives.
+    if (mode === "gr") {
+      this.position = 1;
+      this.target = 1;
+    }
 
     this.el.innerHTML = `
       <div class="vu-face">
@@ -93,10 +99,13 @@ export class VuMeter {
   }
 
   private faceSvg(): string {
-    // Design box 200x110; needle pivot sits below the visible face at (100, 128).
-    const cx = 100;
-    const cy = 128;
-    const rOuter = 102;
+    // The viewBox matches .vu-face 1:1 (148x72 px), so these are CSS pixels and
+    // the SVG scale cannot drift away from the CSS needle. The pivot sits 4px
+    // below the visible face, hidden behind the bezel like real hardware:
+    // .vu-needle and .vu-pivot in styles.css must rotate about the same point.
+    const cx = 74;
+    const cy = 76;
+    const rOuter = 67;
 
     const angleForDb = (db: number): number =>
       ANGLE_MIN + ((db - DB_MIN) / (DB_MAX - DB_MIN)) * (ANGLE_MAX - ANGLE_MIN);
@@ -107,8 +116,8 @@ export class VuMeter {
     };
 
     // Red arc from 0 VU to +3.
-    const [rx1, ry1] = point(angleForDb(0), rOuter - 9);
-    const [rx2, ry2] = point(ANGLE_MAX, rOuter - 9);
+    const [rx1, ry1] = point(angleForDb(0), rOuter - 6);
+    const [rx2, ry2] = point(ANGLE_MAX, rOuter - 6);
 
     let ticks = "";
     const majors: [number, string][] =
@@ -120,9 +129,9 @@ export class VuMeter {
 
     for (const [db, legend] of majors) {
       const a = angleForDb(db);
-      const [x1, y1] = point(a, rOuter - 14);
-      const [x2, y2] = point(a, rOuter - 7);
-      const [tx, ty] = point(a, rOuter - 20);
+      const [x1, y1] = point(a, rOuter - 9);
+      const [x2, y2] = point(a, rOuter - 4.5);
+      const [tx, ty] = point(a, rOuter - 13);
       const red = this.mode === "vu" && db >= 0 ? " red" : "";
       ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="vu-tick${red}"/>
                 <text x="${tx}" y="${ty}" text-anchor="middle" class="vu-text${red}">${legend}</text>`;
@@ -130,21 +139,21 @@ export class VuMeter {
 
     for (let db = -20; db <= 3; db++) {
       const a = angleForDb(db);
-      const [x1, y1] = point(a, rOuter - 11);
-      const [x2, y2] = point(a, rOuter - 7);
+      const [x1, y1] = point(a, rOuter - 7);
+      const [x2, y2] = point(a, rOuter - 4.5);
       ticks += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="vu-tick minor${db >= 0 ? " red" : ""}"/>`;
     }
 
     const redArc =
       this.mode === "vu"
-        ? `<path d="M ${rx1} ${ry1} A ${rOuter - 9} ${rOuter - 9} 0 0 1 ${rx2} ${ry2}" class="vu-red-arc"/>`
+        ? `<path d="M ${rx1} ${ry1} A ${rOuter - 6} ${rOuter - 6} 0 0 1 ${rx2} ${ry2}" class="vu-red-arc"/>`
         : "";
     const brand = this.mode === "gr" ? "GR" : "VU";
 
-    return `<svg class="vu-scale" viewBox="0 0 200 110" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    return `<svg class="vu-scale" viewBox="0 0 148 72" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
         ${redArc}
         ${ticks}
-        <text x="100" y="92" text-anchor="middle" class="vu-brand">${brand}</text>
+        <text x="74" y="60" text-anchor="middle" class="vu-brand">${brand}</text>
       </svg>`;
   }
 }

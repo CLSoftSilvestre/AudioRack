@@ -84,27 +84,36 @@ if (window.location.search.includes("miditest")) {
 // populated rack — meter ingestion, every animation tick, plus a forced
 // style/layout flush — and reports per-frame main-thread cost. Compositing
 // is excluded (meters are transform/class-only, handled off-main-thread).
+function runBench(frames = 600): Record<string, number> {
+  const pump = (window as unknown as Record<string, unknown>).__arPump as
+    | (() => void)
+    | undefined;
+
+  const times: number[] = [];
+  for (let i = 0; i < frames; i++) {
+    const t0 = performance.now();
+    pump?.();
+    pumpTicks(1 / 60);
+    void document.body.offsetWidth; // force style/layout
+    times.push(performance.now() - t0);
+  }
+
+  times.sort((a, b) => a - b);
+  const q = (p: number) => times[Math.min(times.length - 1, Math.floor(p * times.length))];
+  return { frames, p50: q(0.5), p95: q(0.95), p99: q(0.99), max: times[times.length - 1] };
+}
+
+// Exposed as a global so a driver (DevTools protocol, or the console) can run
+// it on demand: headless Chrome's --virtual-time-budget freezes
+// performance.now(), which makes the self-triggering path below report zeros.
+(window as unknown as Record<string, unknown>).__arBench = runBench;
+
 if (window.location.search.includes("bench")) {
   window.setTimeout(() => {
-    const pump = (window as unknown as Record<string, unknown>).__arPump as
-      | (() => void)
-      | undefined;
-
-    const times: number[] = [];
-    for (let i = 0; i < 600; i++) {
-      const t0 = performance.now();
-      pump?.();
-      pumpTicks(1 / 60);
-      void document.body.offsetWidth; // force style/layout
-      times.push(performance.now() - t0);
-    }
-
-    times.sort((a, b) => a - b);
-    const q = (p: number) => times[Math.min(times.length - 1, Math.floor(p * times.length))];
+    const r = runBench();
     console.log(
-      `ARBENCH frames=${times.length} p50=${q(0.5).toFixed(3)}ms ` +
-        `p95=${q(0.95).toFixed(3)}ms p99=${q(0.99).toFixed(3)}ms ` +
-        `max=${times[times.length - 1].toFixed(3)}ms`,
+      `ARBENCH frames=${r.frames} p50=${r.p50.toFixed(3)}ms ` +
+        `p95=${r.p95.toFixed(3)}ms p99=${r.p99.toFixed(3)}ms max=${r.max.toFixed(3)}ms`,
     );
   }, 1500);
 }

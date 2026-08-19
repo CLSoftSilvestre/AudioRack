@@ -1,8 +1,7 @@
-/** RV-8 "Reverb" — 3U, deep indigo face with a large decay display.
- *  brand | SIZE DECAY DAMPING | PREDELAY MIX WIDTH | FREEZE | VU + bypass
+/** RV-8 "Reverb" — 2U, deep indigo face with a decay display.
+ *  brand | SIZE DECAY DAMPING PREDELAY MIX WIDTH | DECAY display + FREEZE | bypass
  */
 
-import { VuMeter } from "../widgets/VuMeter";
 import { Display } from "../widgets/Display";
 import { paramID } from "../bridge/protocol";
 import { paramKnob, paramSwitch, bypassControl, brandBlock, chassis } from "./unitKit";
@@ -10,7 +9,6 @@ import type { Store } from "../store";
 
 export class ReverbUnit {
   readonly el: HTMLElement;
-  private vu: VuMeter;
   private display: Display;
   private unsubs: (() => void)[] = [];
 
@@ -22,15 +20,15 @@ export class ReverbUnit {
 
     const id = (s: string) => paramID(slot, "reverb", s);
 
-    // Big knobs.
+    // All six knobs in one row — 2U leaves room for a single tier.
     const knobs = document.createElement("div");
     knobs.className = "unit-section reverb-knobs";
     for (const [s, label, size, def] of [
-      ["size", "SIZE", 56, 0.5],
-      ["decay", "DECAY", 56, 0.6],
-      ["damping", "DAMPING", 52, 0.5],
+      ["size", "SIZE", 48, 0.5],
+      ["decay", "DECAY", 48, 0.6],
+      ["damping", "DAMPING", 44, 0.5],
       ["predelay", "PREDELAY", 44, 0.3],
-      ["mix", "MIX", 48, 0.3],
+      ["mix", "MIX", 44, 0.3],
       ["width", "WIDTH", 44, 1],
     ] as [string, string, number, number][]) {
       const k = paramKnob(store, id(s), { label, size, defaultValue01: def });
@@ -56,13 +54,6 @@ export class ReverbUnit {
       }),
     );
 
-    const meterWell = document.createElement("div");
-    meterWell.className = "unit-section reverb-meter";
-    this.vu = new VuMeter("output");
-    meterWell.appendChild(this.vu.el);
-    face.appendChild(meterWell);
-    this.unsubs.push(store.onMeters(slot, (f) => this.vu.setLevel(Math.max(f.rmsL, f.rmsR) * 1.228)));
-
     const bypass = bypassControl(store, slot, this.el);
     face.appendChild(bypass.el);
     this.unsubs.push(bypass.unsub);
@@ -70,6 +61,5 @@ export class ReverbUnit {
 
   dispose(): void {
     this.unsubs.forEach((fn) => fn());
-    this.vu.dispose();
   }
 }

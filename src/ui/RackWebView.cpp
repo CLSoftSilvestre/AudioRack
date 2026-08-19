@@ -248,6 +248,37 @@ void RackWebView::pumpMeters()
     web->emitEventIfBrowserIsVisible ("ar_meters", juce::var (payload));
 }
 
+void RackWebView::pumpSpectra()
+{
+    juce::Array<juce::var> frames;
+    SpectrumFrame spectrum;
+
+    for (int slot = 0; slot < kMaxSlots; ++slot)
+    {
+        // mountedModule() is the message-thread mirror, so this pointer stays
+        // valid here: displaced modules are only destroyed by collectGarbage(),
+        // on this same thread, after the mirror has stopped naming them.
+        auto* module = processor.rackEngine().mountedModule (slot);
+
+        if (module == nullptr || ! module->readSpectrum (spectrum))
+            continue;
+
+        juce::Array<juce::var> entry;
+        entry.add (slot);
+        for (auto db : spectrum.db)
+            entry.add (static_cast<int> (std::lround (db * 2.0f)));
+
+        frames.add (juce::var (entry));
+    }
+
+    if (frames.isEmpty())
+        return;
+
+    auto* payload = new juce::DynamicObject();
+    payload->setProperty ("s", frames);
+    web->emitEventIfBrowserIsVisible ("ar_spectrum", juce::var (payload));
+}
+
 // --- inbound --------------------------------------------------------------------
 
 void RackWebView::handleUiEvent (const juce::var& payload)
@@ -377,6 +408,8 @@ void RackWebView::timerCallback()
 
     if (++timerTick % 2 == 0)     // 30 Hz
         flushDirtyParameters();
+    else
+        pumpSpectra();            // 30 Hz, offset one tick from the parameter flush
 }
 
 // --- resources ----------------------------------------------------------------------

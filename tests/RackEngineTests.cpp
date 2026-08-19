@@ -65,8 +65,10 @@ TEST_CASE ("Registry knows the gain module", "[registry]")
 
     ParameterBuilder builder;
     registry.find ("gain")->declareParameters (builder);
-    REQUIRE (builder.specs().size() == 1);
+    REQUIRE (builder.specs().size() == 2);
     CHECK (builder.specs()[0].idSuffix == "gaindb");
+    CHECK (builder.specs()[1].idSuffix == "chmode");
+    CHECK (builder.specs()[1].isChoice());
     CHECK (makeParamID (3, "gain", builder.specs()[0].idSuffix) == "slot3.gain.gaindb");
 }
 
@@ -201,4 +203,62 @@ TEST_CASE ("Displaced modules are destroyed on the message thread only", "[engin
 
     // Engine destruction reclaims whatever was still mounted.
     CHECK (TestModule::aliveCount == 0);
+}
+
+TEST_CASE ("Gain channel mode conditions a mono source", "[gain][channels]")
+{
+    GainModule gain;
+    gain.prepare (kSampleRate, kBlockSize, 2);
+
+    std::atomic<float> gainDb { 0.0f };   // unity gain, so output == conditioned input
+    std::atomic<float> chmode { 0.0f };
+    gain.bindParameter ("gaindb", &gainDb);
+    gain.bindParameter ("chmode", &chmode);
+
+    // Process one block with L=l, R=r at the given mode; report the last L/R.
+    auto run = [&] (float mode, float l, float r, float& outL, float& outR)
+    {
+        chmode.store (mode);
+        gain.reset();
+
+        juce::AudioBuffer<float> buffer (2, kBlockSize);
+        for (int i = 0; i < kBlockSize; ++i)
+        {
+            buffer.setSample (0, i, l);
+            buffer.setSample (1, i, r);
+        }
+
+        juce::dsp::AudioBlock<float> block (buffer);
+        gain.process (block, {});
+
+        outL = buffer.getSample (0, kBlockSize - 1);
+        outR = buffer.getSample (1, kBlockSize - 1);
+    };
+
+    float l = 0.0f, r = 0.0f;
+
+    SECTION ("Stereo passes channels through unchanged")
+    {
+        run (0.0f, 0.8f, 0.0f, l, r);
+        CHECK (l == Approx (0.8f));
+        CHECK (r == Approx (0.0f));
+    }
+    SECTION ("Left copies input 1 to both channels at full level")
+    {
+        run (2.0f, 0.8f, 0.0f, l, r);
+        CHECK (l == Approx (0.8f));
+        CHECK (r == Approx (0.8f));
+    }
+    SECTION ("Right copies input 2 to both channels")
+    {
+        run (3.0f, 0.0f, 0.5f, l, r);
+        CHECK (l == Approx (0.5f));
+        CHECK (r == Approx (0.5f));
+    }
+    SECTION ("Mono sums L+R at -6 dB")
+    {
+        run (1.0f, 0.8f, 0.0f, l, r);
+        CHECK (l == Approx (0.4f));
+        CHECK (r == Approx (0.4f));
+    }
 }

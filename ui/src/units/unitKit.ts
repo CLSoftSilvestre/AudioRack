@@ -4,6 +4,7 @@
 
 import { Knob, type KnobOptions } from "../widgets/Knob";
 import { Switch } from "../widgets/Switch";
+import { RockerSwitch } from "../widgets/RockerSwitch";
 import { Selector } from "../widgets/Selector";
 import { screw } from "../widgets/Screw";
 import { openContextMenu, type MenuItem } from "../widgets/contextMenu";
@@ -113,28 +114,25 @@ export function paramSelector(store: Store, paramId: string, label: string, coun
   return { el: sel.el, unsub };
 }
 
-/** Standard bypass bat switch + power LED; lit = processing. */
+/** Standard unit on/off: an illuminated rocker that glows red when the unit is
+ *  live and goes dark when bypassed. The rocker is its own power indicator, so
+ *  no separate LED is needed. */
 export function bypassControl(store: Store, slot: number, unitRoot: HTMLElement): Bound {
   const bypassId = slotParamID(slot, "bypass");
 
   const wrap = document.createElement("div");
   wrap.className = "unit-section unit-bypass-well";
 
-  const led = document.createElement("div");
-  led.className = "power-led";
-
-  const sw = new Switch({
-    label: "IN",
+  const rocker = new RockerSwitch({
+    label: "POWER",
     onChange: (on) => store.setParam(bypassId, on ? 0 : 1),
   });
 
-  wrap.appendChild(sw.el);
-  wrap.appendChild(led);
+  wrap.appendChild(rocker.el);
 
   const unsub = store.onParam(bypassId, (p) => {
     const bypassed = p.value01 >= 0.5;
-    sw.setOn(!bypassed);
-    led.classList.toggle("lit", !bypassed);
+    rocker.setOn(!bypassed);
     unitRoot.classList.toggle("bypassed", bypassed);
   });
 

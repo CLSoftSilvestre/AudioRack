@@ -27,12 +27,17 @@ namespace audiorack
         "ar_rack"   { slots: [moduleIdOrEmpty x kMaxSlots],
                       modules: [{id, name, category, units}, ...] }
         "ar_meters" { m: [[slot, peakL, peakR, rmsL, rmsR, grDb], ...] }
+        "ar_spectrum" { s: [[slot, halfDb x kSpectrumBands], ...] }   // dBFS x 2, rounded
         "ar_ab"     { bank: 0 | 1 }
         "ar_midi"   { armed: id | null, map: [[id, cc], ...] }
 
     Threading: parameter-change callbacks can arrive on the audio thread, so
     they only flip an atomic dirty flag; a 60 Hz timer folds the meter ring
-    buffer into one event per frame and flushes dirty parameters at 30 Hz.
+    buffer into one event per frame, flushes dirty parameters at 30 Hz, and
+    renders analyser spectra at 30 Hz on the opposite tick so the two never
+    land in the same frame. Spectrum bands are sent as rounded half-dB integers:
+    0.5 dB is finer than one display pixel and keeps the JSON roughly a third
+    the size of full-precision floats.
 */
 class RackWebView final : public juce::Component,
                           private juce::Timer,
@@ -57,6 +62,7 @@ private:
     void sendAllParameters();
     void flushDirtyParameters();
     void pumpMeters();
+    void pumpSpectra();
 
     std::optional<juce::WebBrowserComponent::Resource> serveResource (const juce::String& url);
 

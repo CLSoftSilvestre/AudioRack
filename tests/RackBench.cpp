@@ -12,6 +12,7 @@
 
 #include <core/ModuleRegistry.h>
 #include <core/RackEngine.h>
+#include <dsp/common/SpectrumAnalyser.h>
 
 #include <juce_dsp/juce_dsp.h>
 
@@ -26,6 +27,71 @@
 #include <vector>
 
 using namespace audiorack;
+
+namespace
+{
+
+/// The analyser is split across two threads, so it gets two numbers: what the
+/// audio thread pays per block (push: a mono-sum and a copy) and what the
+/// message thread pays per UI frame (render: window + 4096-point FFT + band
+/// fold). Only the first competes with the realtime budget.
+void benchmarkAnalyser (int blockSize, double sampleRate)
+{
+    dsp::SpectrumAnalyser analyser;
+    analyser.prepare (sampleRate);
+
+    juce::AudioBuffer<float> buffer (2, blockSize);
+    std::mt19937 rng (7);
+    std::uniform_real_distribution<float> dist (-0.5f, 0.5f);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < blockSize; ++i)
+            buffer.setSample (ch, i, dist (rng));
+
+    juce::dsp::AudioBlock<const float> block (buffer);
+
+    constexpr int kPushes  = 20000;
+    constexpr int kRenders = 2000;
+
+    std::vector<double> pushUs, renderUs;
+    pushUs.reserve (kPushes);
+    renderUs.reserve (kRenders);
+
+    for (int i = 0; i < kPushes; ++i)
+    {
+        const auto t0 = std::chrono::steady_clock::now();
+        analyser.push (block);
+        const auto t1 = std::chrono::steady_clock::now();
+        pushUs.push_back (std::chrono::duration<double, std::micro> (t1 - t0).count());
+    }
+
+    SpectrumFrame frame;
+    for (int i = 0; i < kRenders; ++i)
+    {
+        analyser.push (block);   // untimed: force a fresh FFT every render
+        const auto t0 = std::chrono::steady_clock::now();
+        analyser.render (frame);
+        const auto t1 = std::chrono::steady_clock::now();
+        renderUs.push_back (std::chrono::duration<double, std::micro> (t1 - t0).count());
+    }
+
+    std::sort (pushUs.begin(), pushUs.end());
+    std::sort (renderUs.begin(), renderUs.end());
+    const auto pct = [] (const std::vector<double>& v, double p)
+                     { return v[static_cast<size_t> (p * (v.size() - 1))]; };
+
+    const double budgetUs = static_cast<double> (blockSize) / sampleRate * 1.0e6;
+
+    std::printf ("SpectrumAnalyser (%d-point FFT, %d bands)\n",
+                 dsp::SpectrumAnalyser::kFftSize, kSpectrumBands);
+    std::printf ("  %-22s %8.2f us  p95 %6.2f us  (%.2f %% of the %.1f us block budget)\n",
+                 "push()  audio thread", pct (pushUs, 0.5), pct (pushUs, 0.95),
+                 100.0 * pct (pushUs, 0.95) / budgetUs, budgetUs);
+    std::printf ("  %-22s %8.2f us  p95 %6.2f us  (x%d slots at 30 Hz = %.2f %% of one core)\n\n",
+                 "render() msg thread", pct (renderUs, 0.5), pct (renderUs, 0.95),
+                 kMaxSlots, 100.0 * pct (renderUs, 0.95) * kMaxSlots * 30.0 / 1.0e6);
+}
+
+} // namespace
 
 int main (int argc, char** argv)
 {
@@ -122,6 +188,8 @@ int main (int argc, char** argv)
     std::printf ("  %-8s %8.2f us %7.2f %%\n", "p99",  at (0.99), asPct (at (0.99)));
     std::printf ("  %-8s %8.2f us %7.2f %%\n", "max",  micros.back(), asPct (micros.back()));
     std::printf ("\n  reported latency: %d samples\n\n", engine.latencySamples());
+
+    benchmarkAnalyser (blockSize, sampleRate);
 
     return 0;
 }
