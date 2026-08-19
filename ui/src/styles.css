@@ -637,6 +637,15 @@ body.dragging * {
   flex: 1;
 }
 
+/* GN-1: LEVEL sits clear above the LED ladder (no VU meter on this unit). */
+.unit-gain .silkscreen {
+  top: 2px;
+}
+
+.unit-gain .unit-meter-well .ladder {
+  margin-top: 10px;
+}
+
 .unit-bypass-well {
   flex-direction: column;
   gap: 4px;

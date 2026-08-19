@@ -2,12 +2,11 @@
  *
  *  Layout, left to right on brushed champagne aluminium:
  *    rack ear (screws) | brand block | GAIN knob with dB scale |
- *    stereo LED ladder | VU meter | bypass bat switch + power LED | rack ear
+ *    stereo LED ladder | bypass bat switch + power LED | rack ear
  */
 
 import { Knob } from "../widgets/Knob";
 import { LedLadder } from "../widgets/LedLadder";
-import { VuMeter } from "../widgets/VuMeter";
 import { screw } from "../widgets/Screw";
 import { paramSelector, bypassControl } from "./unitKit";
 import { paramID } from "../bridge/protocol";
@@ -17,7 +16,6 @@ export class GainUnit {
   readonly el: HTMLElement;
 
   private ladder: LedLadder;
-  private vu: VuMeter;
   private unsubscribers: (() => void)[] = [];
 
   constructor(store: Store, slot: number) {
@@ -36,7 +34,6 @@ export class GainUnit {
         <div class="unit-section unit-meter-well">
           <div class="silkscreen">LEVEL</div>
         </div>
-        <div class="unit-section unit-vu-well"></div>
       </div>
       <div class="unit-ear right"></div>`;
 
@@ -72,15 +69,8 @@ export class GainUnit {
     this.ladder = new LedLadder(2);
     this.el.querySelector(".unit-meter-well")!.appendChild(this.ladder.el);
 
-    // VU (RMS) meter.
-    this.vu = new VuMeter("output");
-    this.el.querySelector(".unit-vu-well")!.appendChild(this.vu.el);
-
     this.unsubscribers.push(
-      store.onMeters(slot, (f) => {
-        this.ladder.setLevels(f.peakL, f.peakR);
-        this.vu.setLevel(Math.max(f.rmsL, f.rmsR) * 1.228); // 0 VU ref = -1.78 dBFS
-      }),
+      store.onMeters(slot, (f) => this.ladder.setLevels(f.peakL, f.peakR)),
     );
 
     // Unit on/off: illuminated rocker (lit red = processing).
@@ -92,6 +82,5 @@ export class GainUnit {
   dispose(): void {
     this.unsubscribers.forEach((fn) => fn());
     this.ladder.dispose();
-    this.vu.dispose();
   }
 }
