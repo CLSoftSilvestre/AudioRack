@@ -89,7 +89,7 @@ corner to taste.
 │  Gain    1U │  ▓▓  mounted unit (faceplate)              ▓▓  │  ← slot
 │  Compressor │  ▓▓  mounted unit                          ▓▓  │
 │  …          │  ▓▓  empty slot — double-click to mount    ▓▓  │
-│  Reverb  3U │        …                                       │
+│  Reverb  2U │        …                                       │
 │             │                                                │
 │ DRAG A UNIT │                                                │
 │ HERE TO     │                                                │
@@ -226,7 +226,7 @@ Categories, faceplate names, and rack heights:
 | [Parametric EQ](#parametric-eq--eq-6-3u) | EQ-6 | EQ | 3U |
 | [Saturator](#saturator--sat-1-1u) | SAT-1 | Tone | 1U |
 | [Delay](#delay--dl-2-2u) | DL-2 | Time | 2U |
-| [Reverb](#reverb--rv-8-3u) | RV-8 | Time | 3U |
+| [Reverb](#reverb--rv-8-2u) | RV-8 | Time | 2U |
 
 *(Algorithm details for each module live in [docs/modules/](modules/).)*
 
@@ -331,7 +331,7 @@ Digital and tape-style delay with host sync and modulation.
 | Flutter | 0 … 100 % | Wow & flutter depth |
 | Offset | −50 … +50 ms | Stereo time offset |
 
-### Reverb — RV-8 (3U)
+### Reverb — RV-8 (2U)
 
 Eight-line feedback-delay-network reverb.
 

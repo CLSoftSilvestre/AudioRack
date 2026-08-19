@@ -18,7 +18,7 @@ namespace audiorack
 class ReverbModule final : public AudioModule
 {
 public:
-    static constexpr ModuleDescriptor kDescriptor { "reverb", "Reverb", "Time", 3 };
+    static constexpr ModuleDescriptor kDescriptor { "reverb", "Reverb", "Time", 2 };
     static constexpr int kLines = 8;
 
     static ModuleTypeInfo typeInfo();

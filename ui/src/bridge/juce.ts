@@ -246,7 +246,7 @@ class MockBridge implements Bridge {
         { id: "sat", name: "Saturator", category: "Tone", units: 1 },
         { id: "amp", name: "Guitar Amp", category: "Amp", units: 3 },
         { id: "delay", name: "Delay", category: "Time", units: 2 },
-        { id: "reverb", name: "Reverb", category: "Time", units: 3 },
+        { id: "reverb", name: "Reverb", category: "Time", units: 2 },
         { id: "lim", name: "Limiter", category: "Dynamics", units: 1 },
       ],
     };

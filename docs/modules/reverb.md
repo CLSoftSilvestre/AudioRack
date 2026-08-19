@@ -1,4 +1,4 @@
-# Reverb — RV-8 (Time, 3U)
+# Reverb — RV-8 (Time, 2U)
 
 Feedback Delay Network reverb (Jot & Chaigne, "Digital delay networks for
 designing artificial reverberators", AES 1991; Välimäki et al., "Fifty Years

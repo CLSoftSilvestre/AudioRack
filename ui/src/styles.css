@@ -1046,11 +1046,13 @@ body.dragging * {
 .unit-delay .ladder-row { gap: 2px; }
 .unit-delay .ladder-seg { width: 10px; height: 8px; }
 
-/* --- Reverb layout --- */
-.reverb-knobs { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 10px;
-  align-content: center; padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
+/* --- Reverb layout ---
+   2U, no VU: the six knobs sit in one row and take the freed width, with the
+   decay display + FREEZE closing the face before the bypass well. */
+.unit-reverb .unit-face { gap: 10px; }
+.reverb-knobs { flex: 1; gap: 2px; justify-content: space-evenly; min-width: 0;
+  padding-right: 10px; border-right: 1px solid rgba(226, 224, 216, 0.14); }
 .reverb-center { flex-direction: column; gap: 8px; padding: 0 12px; }
-.reverb-meter { flex: 1; }
 
 /* ============================== GUITAR AMP (3U) ============================== */
 
